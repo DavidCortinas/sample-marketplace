@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background-color: #ffffff;
+  --text-color: #333333;
+  --border-color: #e5e7eb;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --accent-color: #f97316;
+  --container-padding: 1.5rem; /* Adjust this value as needed */
+}
+
+body {
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-family: Arial, sans-serif;
+}
+
+@layer components {
+  .header {
+    @apply sticky top-0 z-50 bg-white shadow-sm;
+  }
+
+  .container {
+    @apply mx-auto px-[var(--container-padding)];
+    max-width: 1200px; /* Adjust this value as needed */
+  }
+
+  .header-container {
+    @apply py-4 flex justify-between items-center;
+  }
+
+  .header-logo {
+    @apply text-xl font-bold;
+  }
+
+  .header-nav-link {
+    @apply hover:text-gray-600;
+  }
+
+  .button-primary {
+    @apply bg-[var(--accent-color)] text-white px-6 py-2 rounded-md hover:bg-orange-600 transition-colors;
+  }
+}

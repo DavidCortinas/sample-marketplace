@@ -1,0 +1,10 @@
+# Local settings
+settings.py
+
+# Collected static files
+/static/
+
+# Media files
+/media/
+
+ignore/

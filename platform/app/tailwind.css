@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background-color: #f9fafc;  /* Light gray background */
+  --text-color: #333333;
+  --primary-color: #f97316;  /* Orange color for primary elements */
+}
+
+@layer base {
+  body {
+    @apply bg-[var(--background-color)] text-[var(--text-color)];
+    font-family: 'Inter', sans-serif;  /* You can change this to your preferred font */
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-[var(--primary-color)] text-white px-4 py-2 rounded-md hover:bg-orange-600 transition-colors;
+  }
+
+  .input-field {
+    @apply mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-sm shadow-sm placeholder-gray-400
+           focus:outline-none focus:border-[var(--primary-color)] focus:ring-1 focus:ring-[var(--primary-color)];
+  }
+}
