@@ -2,14 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, useLocation, useOutletContext, useNavigate } from "@remix-run/react";
 import DashboardLayout from "../components/DashboardLayout";
 import DashboardOverview from "../components/DashboardOverview";
-import { User } from "../types/user";
-import { SpotifyCredentials } from '../hooks/useSpotify';
-
-type OutletContext = {
-  user: User | undefined;
-  spotifyCredentials: SpotifyCredentials;
-  refreshSpotifyToken: () => void;
-};
+import { OutletContext } from '../types/outlet';
 
 export default function Dashboard() {
   const location = useLocation();

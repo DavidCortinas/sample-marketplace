@@ -1,11 +1,19 @@
-import { useActionData, Form, useNavigate, useSearchParams } from "@remix-run/react";
+import { useActionData, useSearchParams, useLoaderData } from "@remix-run/react";
 import { useEffect, useState } from "react";
 import type { ActionFunction, LoaderFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { serverLogin, getUserDetails } from "../utils/auth.server";
 import { ActionData, LoginForm } from "../components/LoginForm";
+import { getSession } from "../session.server";
 
-export const loader: LoaderFunction = async () => {
+export const loader: LoaderFunction = async ({ request }) => {
+  const session = await getSession(request);
+  const user = session.get("user");
+
+  if (user) {
+    return redirect("/discover");
+  }
+
   return json({});
 };
 

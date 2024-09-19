@@ -4,5 +4,5 @@ import type { SpotifyCredentials } from "../hooks/useSpotify";
 export type OutletContext = {
   user: User | null;
   spotifyCredentials: SpotifyCredentials | null;
-  refreshSpotifyToken: () => void;
+  refreshSpotifyToken: () => Promise<SpotifyCredentials>;
 }

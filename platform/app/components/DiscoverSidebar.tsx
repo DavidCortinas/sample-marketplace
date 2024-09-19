@@ -325,14 +325,14 @@ export default function DiscoverSidebar() {
   };
 
   return (
-    <div className="bg-white w-64 h-screen flex-shrink-0 border-r border-gray-200 overflow-y-auto flex flex-col">
-      <div className="p-2 border-b border-gray-200">
-        <h2 className="text-sm font-semibold text-gray-500 mb-1 text-center">Control Panel</h2>
+    <div className="bg-bg-primary text-text-primary w-64 h-screen flex-shrink-0 border-r border-border overflow-y-auto flex flex-col">
+      <div className="p-2 border-b border-border">
+        <h2 className="text-sm font-semibold text-text-secondary mb-1 text-center">Control Panel</h2>
         <div className="flex justify-between">
           <button
             onClick={() => setSidebarMode('search')}
             className={`px-3 py-1 text-xs rounded-md ${
-              sidebarMode === 'search' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              sidebarMode === 'search' ? 'bg-button-primary text-button-text' : 'bg-button-secondary text-text-primary hover:bg-button-primary hover:text-button-text'
             }`}
           >
             Search
@@ -340,7 +340,7 @@ export default function DiscoverSidebar() {
           <button
             onClick={() => setSidebarMode('playlists')}
             className={`px-3 py-1 text-xs rounded-md ${
-              sidebarMode === 'playlists' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              sidebarMode === 'playlists' ? 'bg-button-primary text-button-text' : 'bg-button-secondary text-text-primary hover:bg-button-primary hover:text-button-text'
             }`}
           >
             Playlists
@@ -348,7 +348,7 @@ export default function DiscoverSidebar() {
           <button
             onClick={() => setSidebarMode('queries')}
             className={`px-3 py-1 text-xs rounded-md ${
-              sidebarMode === 'queries' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              sidebarMode === 'queries' ? 'bg-button-primary text-button-text' : 'bg-button-secondary text-text-primary hover:bg-button-primary hover:text-button-text'
             }`}
           >
             Queries
@@ -360,7 +360,7 @@ export default function DiscoverSidebar() {
         <div className="flex-1 overflow-y-auto">
           <div className="p-4">
             <h2 className="text-lg text-center font-semibold">Chart Your Course</h2>
-            <p className="text-sm text-center mb-2">Select up to any 5 of the following</p>
+            <p className="text-sm text-center mb-2 text-text-secondary">Select up to any 5 of the following</p>
             <div className="flex justify-center mb-2">
               {(['Songs', 'Artists', 'Genres'] as const).map((tab) => (
                 <button
@@ -368,8 +368,8 @@ export default function DiscoverSidebar() {
                   onClick={() => handleCategoryChange(tab)}
                   className={`px-3 py-1 text-sm ${
                     category === tab
-                      ? 'bg-orange-500 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      ? 'bg-button-primary text-button-text'
+                      : 'bg-button-secondary text-text-primary hover:bg-button-primary hover:text-button-text'
                   } rounded-md mr-1`}
                   type="button"
                 >
@@ -382,24 +382,24 @@ export default function DiscoverSidebar() {
                 type="text"
                 value={inputValue}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+                className="w-full px-3 py-2 bg-input-bg text-input-text border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-button-primary focus:border-button-primary"
                 placeholder={`Search ${category}...`}
               />
               {inputValue && (
                 <button
                   onClick={clearInput}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary"
                 >
                   <XCircleIcon className="h-5 w-5" />
                 </button>
               )}
             </div>
             {inputValue && suggestions.length > 0 && (
-              <ul className="mt-1 max-h-60 overflow-auto bg-white border border-gray-300 rounded-md shadow-sm">
+              <ul className="mt-1 max-h-60 overflow-auto bg-bg-primary border border-border rounded-md shadow-sm">
                 {suggestions.map((item) => (
                   <button
                     key={item.id} 
-                    className="w-full px-3 py-2 hover:bg-gray-100 cursor-pointer flex items-center text-left"
+                    className="w-full px-3 py-2 hover:bg-bg-secondary cursor-pointer flex items-center text-left"
                     onClick={() => handleSelection(item)}
                   >
                     {item.imageUrl && (
@@ -407,9 +407,10 @@ export default function DiscoverSidebar() {
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="font-semibold truncate">{item.name}</div>
-                      {item.artistName && <div className="text-sm text-gray-500 truncate">{item.artistName}</div>}
+                      {item.artistName && <div className="text-sm text-text-secondary truncate">{item.artistName}</div>}
                     </div>
-                  </button>                ))}
+                  </button>
+                ))}
               </ul>
             )}
             <div className="mt-4">
@@ -425,9 +426,9 @@ export default function DiscoverSidebar() {
 
                 return (
                   <div key={categoryLabel} className="mb-2">
-                    <h4 className="text-sm font-semibold text-gray-600 mb-1">{categoryLabel}</h4>
+                    <h4 className="text-sm font-semibold text-text-secondary mb-1">{categoryLabel}</h4>
                     {categorySelections.map((item) => (
-                      <div key={item.id} className={`flex items-center justify-between bg-gray-100 p-2 rounded-md mb-1 ${
+                      <div key={item.id} className={`flex items-center justify-between bg-bg-secondary p-2 rounded-md mb-1 ${
                         categoryLabel === 'Songs' ? 'border-l-4 border-blue-500' :
                         categoryLabel === 'Artists' ? 'border-l-4 border-green-500' :
                         'border-l-4 border-purple-500'
@@ -439,7 +440,7 @@ export default function DiscoverSidebar() {
                           <div className="min-w-0 flex-1">
                             <div className="font-medium truncate">{item.name}</div>
                             {'artistName' in item && (
-                              <div className="text-sm text-gray-500 truncate">{item.artistName}</div>
+                              <div className="text-sm text-text-secondary truncate">{item.artistName}</div>
                             )}
                           </div>
                         </div>
@@ -454,13 +455,13 @@ export default function DiscoverSidebar() {
                   </div>
                 );
               }) : (
-                <p className="text-sm text-center">Select up to five of any songs, artists, or genres to triangulate your search and use the advanced parameters to fine-tune the results.</p>
+                <p className="text-sm text-center text-text-secondary">Select up to five of any songs, artists, or genres to triangulate your search and use the advanced parameters to fine-tune the results.</p>
               )}
             </div>
           </div>
-          <Accordion.Root type="single" collapsible className="">
+          <Accordion.Root type="single" collapsible className="border-t border-border">
             <Accordion.Item value="advanced-params">
-              <Accordion.Trigger className="flex items-center justify-center w-full py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+              <Accordion.Trigger className="flex items-center justify-center w-full py-2 text-sm font-medium text-text-primary hover:bg-bg-secondary transition-colors">
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -474,15 +475,15 @@ export default function DiscoverSidebar() {
                 {Object.entries(advancedParams).map(([param, values]) => (
                   <div key={param} className="mb-4">
                     <div className="flex items-center justify-between px-6">
-                      <label className="text-sm font-medium text-gray-700">
+                      <label className="text-sm font-medium text-text-primary">
                         {param === 'duration_ms' ? 'Duration' : param === 'time_signature' ? 'Time Signature' : param === 'valence' ? 'Positiveness' : param.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                       </label>
                       <Switch.Root
                         checked={values.enabled}
                         onCheckedChange={() => handleParamToggle(param)}
-                        className="w-11 h-6 bg-gray-200 rounded-full relative data-[state=checked]:bg-orange-500 transition-colors"
+                        className="w-11 h-6 bg-bg-secondary rounded-full relative data-[state=checked]:bg-button-primary transition-colors"
                       >
-                        <Switch.Thumb className="block w-5 h-5 bg-white rounded-full transition-transform duration-100 translate-x-0.5 will-change-transform data-[state=checked]:translate-x-[22px]" />
+                        <Switch.Thumb className="block w-5 h-5 bg-button-text rounded-full transition-transform duration-100 translate-x-0.5 will-change-transform data-[state=checked]:translate-x-[22px]" />
                       </Switch.Root>
                     </div>
                     {values.enabled && (
@@ -495,20 +496,20 @@ export default function DiscoverSidebar() {
                           onValueChange={(newValues) => handleParamChange(param, newValues)}
                           className="relative flex items-center select-none touch-none w-full h-5"
                         >
-                          <Slider.Track className="bg-gray-200 relative grow rounded-full h-1">
-                            <Slider.Range className="absolute bg-orange-500 rounded-full h-full" />
+                          <Slider.Track className="bg-slider-bg relative grow rounded-full h-1">
+                            <Slider.Range className="absolute bg-slider-fill rounded-full h-full" />
                           </Slider.Track>
                           {param === 'mode' ? (
-                            <Slider.Thumb className="block w-5 h-5 bg-white shadow-md rounded-full hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                            <Slider.Thumb className="block w-5 h-5 bg-button-text shadow-md rounded-full hover:bg-button-primary focus:outline-none focus:ring-2 focus:ring-button-primary" />
                           ) : (
                             <>
-                              <Slider.Thumb className="block w-5 h-5 bg-white shadow-md rounded-full hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-orange-500" />
-                              <Slider.Thumb className="block w-5 h-5 bg-white shadow-md rounded-full hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-orange-500" />
-                              <Slider.Thumb className="block w-5 h-5 bg-white shadow-md rounded-full hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                              <Slider.Thumb className="block w-5 h-5 bg-button-text shadow-md rounded-full hover:bg-button-primary focus:outline-none focus:ring-2 focus:ring-button-primary" />
+                              <Slider.Thumb className="block w-5 h-5 bg-button-text shadow-md rounded-full hover:bg-button-primary focus:outline-none focus:ring-2 focus:ring-button-primary" />
+                              <Slider.Thumb className="block w-5 h-5 bg-button-text shadow-md rounded-full hover:bg-button-primary focus:outline-none focus:ring-2 focus:ring-button-primary" />
                             </>
                           )}
                         </Slider.Root>
-                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                        <div className="flex justify-between text-xs text-text-secondary mt-1">
                           {param === 'mode' ? (
                             <>
                               <span>Minor</span>
@@ -532,7 +533,7 @@ export default function DiscoverSidebar() {
           <div className="px-4 mb-2">
             <button
               onClick={handleSaveQuery}
-              className="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+              className="mt-4 w-full px-4 py-2 bg-blue-500 text-button-text rounded hover:bg-blue-600 transition-colors"
             >
               Save Query
             </button>
@@ -540,7 +541,7 @@ export default function DiscoverSidebar() {
           <div className="px-4">
             <button
               type="submit"
-              className="w-full mx-auto block bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 transition-colors"
+              className="w-full mx-auto block bg-button-primary text-button-text px-4 py-2 rounded-md hover:opacity-90 transition-colors"
               onClick={handleSubmit}
             >
               Start Digging
@@ -552,7 +553,7 @@ export default function DiscoverSidebar() {
       {sidebarMode === 'playlists' && (
         <div className="flex-1 overflow-y-auto p-4">
           <h2 className="text-lg text-center font-semibold">Playlists</h2>
-          <p className="text-center text-gray-500 mt-4">Playlist functionality coming soon!</p>
+          <p className="text-center text-text-secondary mt-4">Playlist functionality coming soon!</p>
         </div>
       )}
       

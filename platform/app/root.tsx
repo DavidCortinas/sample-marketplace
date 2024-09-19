@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import type { ActionFunction, LinksFunction, LoaderFunction } from "@remix-run/node";
 import { 
   json,
+  redirect,
   Outlet, 
   useLoaderData,
   useFetcher,
@@ -9,16 +10,17 @@ import {
   LiveReload,
   Meta,
   Scripts,
-  ScrollRestoration
+  ScrollRestoration,
+  FetcherWithComponents
 } from "@remix-run/react";
 import { Layout } from './components/Layout';
 import { SpotifyCredentials } from './hooks/useSpotify';
 import { getSession, commitSession } from './session.server';
 import { SpotifyScript } from './components/SpotifyScript';
 import { User } from './types/user';
+import { OutletContext } from './types/outlet';
 import styles from "./tailwind.css?url";
 import customStyles from "./custom-style.css?url";
-
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: styles },
@@ -28,12 +30,29 @@ export const links: LinksFunction = () => [
 ];
 
 export const loader: LoaderFunction = async ({ request }) => {
-  console.log("Root loader - Request cookies:", request.headers.get("Cookie"));
   const session = await getSession(request);
-  console.log("Root loader - Full session data:", JSON.stringify(session.data, null, 2));
   const user = session.get("user");
-  console.log("Root loader - User data:", user);
+  const url = new URL(request.url);
 
+  console.log("Root loader - Full URL:", request.url);
+  console.log("Root loader - Pathname:", url.pathname);
+  console.log("Root loader - User:", user);
+
+  // Redirect root to discover
+  if (url.pathname === "/") {
+    console.log("Redirecting to /discover");
+    return redirect("/discover");
+  }
+
+  // Allow access to these routes without redirection
+  const publicRoutes = ['/login', '/register', '/discover'];
+
+  if (!user && !publicRoutes.includes(url.pathname)) {
+    console.log("Redirecting to /login");
+    return redirect("/login");
+  }
+
+  console.log("Returning JSON response");
   return json({ user, spotifyCredentials: session.get("spotifyCredentials") });
 };
 
@@ -61,7 +80,7 @@ export const action: ActionFunction = async ({ request }) => {
 
 export default function App() {
   const data = useLoaderData<{ user: User | undefined, spotifyCredentials: SpotifyCredentials }>();
-  const fetcher = useFetcher();
+  const fetcher = useFetcher() as FetcherWithComponents<{ spotifyCredentials: SpotifyCredentials }>;
 
   const refreshSpotifyToken = useCallback(() => {
     fetcher.submit(null, { method: "post" });
@@ -81,7 +100,7 @@ export default function App() {
             user: data.user,
             spotifyCredentials: fetcher.data?.spotifyCredentials || data.spotifyCredentials,
             refreshSpotifyToken 
-          }}/>
+          } as OutletContext}/>
         </Layout>
         <ScrollRestoration />
         <Scripts />

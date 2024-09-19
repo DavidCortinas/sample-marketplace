@@ -1,7 +1,6 @@
 import { createCookie, json } from "@remix-run/node";
 import { serverFetch } from "./api.server";
 import { AuthTokens } from "../types/auth";
-import { parse } from 'cookie';
 
 const AUTH_BASE_URL = "/auth";
 

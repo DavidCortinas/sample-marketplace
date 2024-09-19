@@ -1,6 +1,12 @@
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
+@import "theme.css";
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text);
+}
 
 .map-background {
   @apply bg-gray-200;
@@ -88,4 +94,24 @@
 
 .btn-secondary {
   @apply bg-gray-200 text-gray-800 py-2 px-4 rounded hover:bg-gray-300 transition duration-200;
+}
+
+/* Add theme-specific styles here */
+.dark-theme .map-background {
+  @apply bg-gray-700;
+  background-image: linear-gradient(
+      rgba(255, 255, 255, 0.1) 1px,
+      transparent 1px
+    ),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+}
+
+.dark-theme .btn-primary {
+  @apply bg-blue-700 hover:bg-blue-800;
+}
+
+.dark-theme .btn-secondary {
+  @apply bg-gray-700 text-gray-200 hover:bg-gray-600;
 }
