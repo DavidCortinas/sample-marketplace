@@ -6,13 +6,16 @@ import { getAccessToken } from '../utils/auth.server';
 import { ActionFunction, LoaderFunction, json, redirect } from '@remix-run/node';
 import { Combobox } from '@headlessui/react';
 import spotifyLogo from '/images/Spotify_Icon_RGB_White.png';
-import type { OutletContext } from '../types/outlet';
+import type { User } from '../types/user';
+import { useTheme } from '../hooks/useTheme';
 
 export const loader: LoaderFunction = async ({ request }) => {
   const session = await getSession(request);
+  console.log("Session:", session.data);
   const user = session.get("user");
   const accessToken = await getAccessToken(request);
   console.log("Access token:", accessToken);
+  console.log("User:", user);
   return json({ user, accessToken });
 };
 
@@ -56,8 +59,9 @@ export default function Onboarding() {
   const { accessToken } = useLoaderData<{ accessToken: string }>();
   const [step, setStep] = useState(1);
   const navigate = useNavigate();
-  const { user } = useOutletContext<OutletContext>();
+  const { user } = useLoaderData<{ user: User }>();
   const fetcher = useFetcher();
+  const { isDarkMode } = useTheme();
 
   const [username, setUsername] = useState('');
   const [profileImage, setProfileImage] = useState<File | null>(null);
@@ -174,12 +178,16 @@ export default function Onboarding() {
 
   const maxSteps = 4; // Now includes the Spotify connection step
   console.log("User:", user);
+  console.log("Is Dark Mode:", isDarkMode);
 
   return (
-    <div className="flex items-center justify-center min-h-screen map-overlay map-background">
-      <div className="w-full max-w-md">
-        <div className="bg-gradient-to-br from-orange-400 to-pink-500 p-8 rounded-lg shadow-lg">
-          <div className="bg-white bg-opacity-90 p-6 rounded-md">
+      <div className="flex items-center justify-center min-h-screen map-overlay map-background">
+        <div className="w-full max-w-md">
+          <div className={`p-8 rounded-lg shadow-lg w-full max-w-md
+            bg-gradient-to-br from-orange-400 to-pink-500
+            dark:from-gray-800 dark:via-gray-900 dark:to-black
+            transition-colors duration-300`}>
+            <div className="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-95 p-6 rounded-md shadow-md">
             <h1 className="text-3xl text-center font-bold text-gray-800">{user ? "Welcome to Audafact," : "Welcome to Audafact"}</h1>
             {user && (
               <h1 className="text-2xl text-center font-bold text-gray-800">

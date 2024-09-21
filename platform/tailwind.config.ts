@@ -49,4 +49,5 @@ export default {
     },
   },
   plugins: [radixPlugin],
+  darkMode: 'class',
 } satisfies Config;

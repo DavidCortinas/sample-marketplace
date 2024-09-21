@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { User } from "../types/user";
 import { useSearchParams } from "@remix-run/react";
+import { useTheme } from "../hooks/useTheme"; // Add this import
 
 export interface ActionData {
   success: boolean;
@@ -24,7 +25,7 @@ export interface LoginFormProps {
 
 function LoginForm({ isLoading, errorMessage, isLogin, setIsLogin }: LoginFormProps) {
   const navigate = useNavigate();
-  const submit = useSubmit();  // Add this line
+  const submit = useSubmit();
   const setTokens = useAuthStore(state => state.setTokens)
   const actionData = useActionData() as ActionData | undefined;
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -35,6 +36,7 @@ function LoginForm({ isLoading, errorMessage, isLogin, setIsLogin }: LoginFormPr
   const [searchParams] = useSearchParams();
   const error = searchParams.get("error");
   const message = searchParams.get("message");
+  const { isDarkMode } = useTheme();
 
   const validatePasswords = () => {
     if (!isLogin && password !== confirmPassword) {
@@ -81,15 +83,19 @@ function LoginForm({ isLoading, errorMessage, isLogin, setIsLogin }: LoginFormPr
   };
 
   return (
-    <div className="bg-gradient-to-br from-orange-400 to-pink-500 p-8 rounded-lg shadow-lg w-full max-w-md">
-      <div className="bg-white bg-opacity-90 p-6 rounded-md">
-        <h1 className="text-3xl font-bold mb-2 text-center text-gray-800">AUDAFACT</h1>
-        <p className="text-center text-gray-600 mb-2">
+      <div className={`p-8 rounded-lg shadow-lg w-full max-w-md ${
+        isDarkMode 
+          ? 'bg-gradient-to-br from-gray-800 via-gray-900 to-black' 
+          : 'bg-gradient-to-br from-orange-400 to-pink-500'
+      } transition-colors duration-300`}>
+        <div className="bg-white dark:bg-gray-800 dark:bg-opacity-95 bg-opacity-90 p-6 rounded-md shadow-md">
+        <h1 className="text-3xl font-bold mb-2 text-center text-gray-800 dark:text-gray-200">AUDAFACT</h1>
+        <p className="text-center text-gray-600 dark:text-gray-300 mb-2">
           {isLogin 
             ? "Unlock your stash of music, breaks, loops and more..." 
             : "Start your journey to discover music, loops, breaks, and other sounds for your next project..."}
         </p>
-        <p className="text-center text-gray-500 text-sm mb-6">
+        <p className="text-center text-gray-500 dark:text-gray-400 text-sm mb-6">
           {"Dive into a world of undiscovered audio gems"}
         </p>
 
@@ -97,7 +103,7 @@ function LoginForm({ isLoading, errorMessage, isLogin, setIsLogin }: LoginFormPr
         <Form method="post" action="/auth/google">
           <button
             type="submit"
-            className="btn-primary w-full text-center block mb-4 flex items-center justify-center relative"
+            className="btn-primary w-full text-center block mb-4 flex items-center justify-center relative dark:bg-blue-600 dark:hover:bg-blue-700"
           >
             <div className="google-logo-wrapper absolute left-2">
               <div className="google-logo-background">
@@ -117,8 +123,8 @@ function LoginForm({ isLoading, errorMessage, isLogin, setIsLogin }: LoginFormPr
         </Form>
 
         <div className="relative mb-4">
-          <hr className="border-t border-gray-300" />
-          <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-gray-500 text-sm">
+          <hr className="border-t border-gray-300 dark:border-gray-600" />
+          <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 px-2 text-gray-500 dark:text-gray-400 text-sm">
             or
           </span>
         </div>
@@ -131,30 +137,30 @@ function LoginForm({ isLoading, errorMessage, isLogin, setIsLogin }: LoginFormPr
         >
           <input type="hidden" name="isLogin" value={isLogin ? "true" : "false"} />
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
             <input
               id="email"
               type="email"
               name="email"
-              className="input-field"
+              className="input-field dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
               required
               onChange={(e) => setEmailError(validateEmail(e.target.value))}
             />
-            {emailError && <p className="mt-1 text-sm text-red-600">{emailError}</p>}
+            {emailError && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>}
           </div>
           <div className="relative">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
             <input
               id="password"
               type={showPassword ? "text" : "password"}
               name="password"
-              className="input-field pr-10"
+              className="input-field dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 pr-10"
               required
               onChange={(e) => setPassword(e.target.value)}
             />
             <button
               type="button"
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-500 mt-6"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200 mt-6"
               onClick={() => setShowPassword(!showPassword)}
             >
               {showPassword ? (
@@ -166,21 +172,21 @@ function LoginForm({ isLoading, errorMessage, isLogin, setIsLogin }: LoginFormPr
           </div>
           {!isLogin && (
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">Confirm Password</label>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm Password</label>
               <input
                 id="confirmPassword"
                 type="password"
                 name="confirmPassword"
-                className="input-field"
+                className="input-field dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
                 required
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
             </div>
           )}
-          {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
+          {passwordError && <p className="text-sm text-red-600 dark:text-red-400">{passwordError}</p>}
           <button
             type="submit"
-            className="btn-secondary w-full"
+            className="btn-secondary w-full dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
             disabled={isLoading}
           >
             {isLoading ? "Polishing gems..." : (isLogin ? "Enter with Email" : "Register with Email")}
@@ -188,25 +194,25 @@ function LoginForm({ isLoading, errorMessage, isLogin, setIsLogin }: LoginFormPr
         </Form>
         
         {actionData?.message && (
-          <p className={`mt-4 text-center text-sm ${actionData.success ? "text-green-600" : "text-red-600"}`}>
+          <p className={`mt-4 text-center text-sm ${actionData.success ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
             {actionData.message}
           </p>
         )}
-        <p className="mt-4 text-center text-sm text-gray-600">
+        <p className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
           {isLogin ? "Don't have an account? " : "Already have an account? "}
           <button
             onClick={() => setIsLogin(!isLogin)}
-            className="text-orange-500 hover:text-orange-600 font-medium"
+            className="text-orange-500 hover:text-orange-600 dark:text-orange-400 dark:hover:text-orange-300 font-medium"
             type="button"
           >
             {isLogin ? "Sign Up" : "Log In"}
           </button>
         </p>
         {errorMessage && (
-          <p className="text-red-600 text-sm italic mt-2">{errorMessage}</p>
+          <p className="text-red-600 dark:text-red-400 text-sm italic mt-2">{errorMessage}</p>
         )}
         {error && (
-          <p className="text-red-600 text-center text-sm italic mt-2">
+          <p className="text-red-600 dark:text-red-400 text-center text-sm italic mt-2">
             {message || getErrorMessage(error)}
           </p>
         )}

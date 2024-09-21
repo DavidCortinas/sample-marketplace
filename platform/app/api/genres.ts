@@ -1,12 +1,8 @@
 import { API_BASE_URL } from "../config";
 
-export async function fetchGenres(accessToken: string): Promise<string[]> {
+export async function fetchGenres(): Promise<string[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/genres/`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+    const response = await fetch(`${API_BASE_URL}/api/genres/`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

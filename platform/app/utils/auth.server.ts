@@ -19,6 +19,7 @@ const refreshTokenCookie = createCookie("refresh_token", {
 });
 
 export async function setAccessToken(token: string) {
+  console.log("setAccessToken token", token);
   return await accessTokenCookie.serialize(token);
 }
 
@@ -27,10 +28,13 @@ export async function setRefreshToken(token: string) {
 }
 
 export async function getAccessToken(request: Request): Promise<string | null> {
+  console.log("getAccessToken request", request);
   const cookieHeader = request.headers.get("Cookie");
+  console.log("getAccessToken cookieHeader", cookieHeader);
   if (!cookieHeader) return null;
 
   const token = await accessTokenCookie.parse(cookieHeader);
+  console.log("getAccessToken token", token);
   if (!token) return null;
 
   // The token is no longer base64 encoded, so we can return it directly
@@ -66,23 +70,35 @@ export async function serverRegister(email: string, password: string) {
 }
 
 export async function serverLogin(email: string, password: string) {
+  console.log("Attempting login with email:", email);
   try {
-    const data = await serverFetch(`${AUTH_BASE_URL}/login/`, {
+    const response = await serverFetch(`${AUTH_BASE_URL}/login/`, {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ email, password }),
     });
-    return json<AuthTokens>({
-      access: data.access,
-      refresh: data.refresh,
-      onboarding_required: data.onboarding_required,
-    });
+
+    console.log("Login response status:", response.status);
+    console.log("Login response headers:", response.headers);
+
+    const data = await response.json();
+    console.log("Login response data:", data);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return data;
   } catch (error) {
-    console.error("Login error:", error);
-    return json({ error: "Login failed" }, { status: 401 });
+    console.error("Server login error:", error);
+    throw error;
   }
 }
 
 export async function getUserDetails(token: string) {
+  console.log("Getting user details with token:", token);
   try {
     const data = await serverFetch(`${AUTH_BASE_URL}/user/details/`, {
       method: "GET",
@@ -90,7 +106,8 @@ export async function getUserDetails(token: string) {
         Authorization: `Bearer ${token}`,
       },
     });
-    return json(data);
+    console.log("User details response:", data);
+    return data;
   } catch (error) {
     console.error("Get user details error:", error);
     return json({ error: "Failed to fetch user details" }, { status: 401 });
@@ -100,29 +117,40 @@ export async function getUserDetails(token: string) {
 export async function serverLogout(request: Request) {
   const formData = await request.formData();
   const accessToken = formData.get("accessToken");
+  const refreshToken = formData.get("refreshToken");
 
   if (!accessToken) {
     console.error("No access token provided for logout");
     return json({ error: "No access token provided" }, { status: 400 });
   }
+  
+  if (!refreshToken) {
+    console.error("No refresh token provided for logout");
+    return json({ error: "No refresh token provided" }, { status: 400 });
+  }
 
   console.log("Attempting logout with access token:", accessToken);
-
+  console.log("Attempting logout with refresh token:", refreshToken);
   try {
     const response = await serverFetch(`${AUTH_BASE_URL}/logout/`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
       },
+      body: JSON.stringify({ refresh: refreshToken }),
     });
-    
-    console.log('Python API response status:', response.status);
-    console.log('Python API response body:', await response.text());
+
+    console.log("Python API response status:", response.status);
+    console.log("Python API response body:", await response.text());
 
     // Clear the cookies
-    const { accessToken: clearedAccessToken, refreshToken: clearedRefreshToken } = await clearTokens();
+    const {
+      accessToken: clearedAccessToken,
+      refreshToken: clearedRefreshToken,
+    } = await clearTokens();
 
-    console.log('Cleared tokens:', { clearedAccessToken, clearedRefreshToken });
+    console.log("Cleared tokens:", { clearedAccessToken, clearedRefreshToken });
 
     return json(
       { success: true },

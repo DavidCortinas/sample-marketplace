@@ -10,10 +10,16 @@ export default function DiscoverHeader({ user }: { user: User | null }) {
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
   const avatarButtonRef = useRef<HTMLButtonElement>(null);
   const navigate = useNavigate();
+  console.log('discover header user', user)
 
   const { accessToken } = useLoaderData<{ accessToken: string }>();
+  console.log('discover header accessToken', accessToken)
 
-  const isAuthenticated = !!user;
+  const { refreshToken } = useLoaderData<{ refreshToken: string }>();
+  console.log('discover header refreshToken', refreshToken)
+
+  const isAuthenticated = user && user.data;
+  console.log('discover header isAuthenticated', isAuthenticated)
 
   const handleImageError = () => {
     setImageError(true);
@@ -21,7 +27,7 @@ export default function DiscoverHeader({ user }: { user: User | null }) {
 
   const handleSignInOut = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (isAuthenticated) {
-      console.log("Attempting to sign out");
+      console.log("Attempting to sign out with refresh token:", refreshToken);
       e.preventDefault();
       e.currentTarget.form?.submit();
     } else {
@@ -91,6 +97,7 @@ export default function DiscoverHeader({ user }: { user: User | null }) {
                       <Link to="/settings" className="block px-4 py-2 text-sm text-header-text hover:bg-header-button-hover">Settings</Link>
                       <Form method="post" action="/api/auth/logout">
                         <input type="hidden" name="accessToken" value={accessToken} />
+                        <input type="hidden" name="refreshToken" value={refreshToken} />
                         <button 
                           type="submit"
                           className="block w-full text-left px-4 py-2 text-sm text-header-text hover:bg-header-button-hover"

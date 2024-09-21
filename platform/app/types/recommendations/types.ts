@@ -84,5 +84,6 @@ export interface Query {
   parameters: {
     selections: FormattedResult[];
     advancedParams: AdvancedParams;
+    category: CategoryLabel;
   };
 }

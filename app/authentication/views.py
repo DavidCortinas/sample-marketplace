@@ -16,6 +16,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from .serializers import UserSerializer
@@ -203,7 +204,7 @@ class UserDetailsView(APIView):
 
 
 class LogoutView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         print(f"Received logout request with headers: {request.headers}")
