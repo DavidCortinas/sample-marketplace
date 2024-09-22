@@ -19,6 +19,17 @@ const categoryMapping: Record<CategoryLabel, CategoryType> = {
   'Genres': 'genre'
 };
 
+const parameterConfig = {
+  key: { min: 0, max: 11, step: 1, formatValue: (v: number) => ['C', 'C♯/D♭', 'D', 'D♯/E♭', 'E', 'F', 'F♯/G♭', 'G', 'G♯/A♭', 'A', 'A♯/B♭', 'B'][v] },
+  duration_ms: { min: 30000, max: 3600000, step: 1000, formatValue: (v: number) => `${Math.floor(v / 60000)}:${((v % 60000) / 1000).toFixed(0).padStart(2, '0')}` },
+  mode: { min: 0, max: 1, step: 1, formatValue: (v: number) => v === 0 ? 'Minor' : 'Major' },
+  loudness: { min: -60, max: 0, step: 0.1, formatValue: (v: number) => `${v.toFixed(1)} dB` },
+  tempo: { min: 40, max: 220, step: 1, formatValue: (v: number) => `${v.toFixed(0)} BPM` },
+  time_signature: { min: 3, max: 7, step: 1, formatValue: (v: number) => `${v}/4` },
+};
+
+const defaultParamConfig = { min: 0, max: 100, step: 1, formatValue: (v: number) => v.toString() };
+
 export default function DiscoverSidebar({ 
   user, 
   getAccessToken, 
@@ -95,6 +106,8 @@ export default function DiscoverSidebar({
     prevInputValueRef.current = inputValue;
     prevCategoryRef.current = category;
   });
+
+  const getSliderConfig = (param: string) => parameterConfig[param as keyof typeof parameterConfig] || defaultParamConfig;
 
   return (
     <div className="bg-bg-primary text-text-primary w-full h-full md:w-64 md:h-screen flex-shrink-0 border-r border-border overflow-y-auto flex flex-col z-40 relative">
@@ -302,9 +315,9 @@ export default function DiscoverSidebar({
                     {values.enabled && (
                       <div className="mt-2 px-4">
                         <Slider.Root
-                          min={0}
-                          max={100}
-                          step={1}
+                          min={getSliderConfig(param).min}
+                          max={getSliderConfig(param).max}
+                          step={getSliderConfig(param).step}
                           value={getSliderValue(param, values)}
                           onValueChange={(newValues) => handleParamChange(param, newValues)}
                           className="relative flex items-center select-none touch-none w-full h-5"

@@ -1,5 +1,10 @@
 import { fetchGenres } from "../api/genres";
-import { FormattedResult, CategoryLabel, AdvancedParams, Query } from "../types/recommendations/types";
+import {
+  FormattedResult,
+  CategoryLabel,
+  AdvancedParams,
+  Query,
+} from "../types/recommendations/types";
 import { saveQuery } from "../api/queries";
 
 export type CategoryType = "track" | "artist" | "genre";
@@ -189,7 +194,7 @@ export const handleCategoryChange = async (
   newCategory: CategoryLabel,
   setCategory: (category: CategoryLabel) => void,
   setInputValue: (value: string) => void,
-  setSuggestions: (suggestions: FormattedResult[]) => void,
+  setSuggestions: (suggestions: FormattedResult[]) => void
 ) => {
   setCategory(newCategory);
   setInputValue("");
@@ -222,40 +227,79 @@ export const handleParamChange = (
   setAdvancedParams: React.Dispatch<React.SetStateAction<AdvancedParams>>
 ) => {
   setAdvancedParams((prev) => {
-    if (param === "mode") {
-      return {
-        ...prev,
-        [param]: { ...prev[param], target: Math.round(newValues[0]) },
-      };
-    } else {
-      const [min, target, max] = newValues.map((v) =>
-        denormalizeValue(param, v, advancedParams)
-      );
-      return {
-        ...prev,
-        [param]: {
-          ...prev[param],
-          min: Math.min(min, target, max),
-          target: Math.max(min, Math.min(target, max)),
-          max: Math.max(min, target, max),
-        },
-      };
+    switch (param) {
+      case "mode":
+        return {
+          ...prev,
+          [param]: { ...prev[param], target: Math.round(newValues[0]) },
+        };
+      case "key":
+      case "duration_ms":
+      case "loudness":
+      case "tempo":
+      case "time_signature": {
+        const [min, target, max] = newValues.map(Math.round);
+        return {
+          ...prev,
+          [param]: {
+            ...prev[param],
+            min: Math.min(min, target, max),
+            target: Math.max(min, Math.min(target, max)),
+            max: Math.max(min, target, max),
+          },
+        };
+      }
+      default: {
+        const [normalizedMin, normalizedTarget, normalizedMax] = newValues.map(
+          (v) => denormalizeValue(param, v)
+        );
+        return {
+          ...prev,
+          [param]: {
+            ...prev[param],
+            min: Math.min(normalizedMin, normalizedTarget, normalizedMax),
+            target: Math.max(
+              normalizedMin,
+              Math.min(normalizedTarget, normalizedMax)
+            ),
+            max: Math.max(normalizedMin, normalizedTarget, normalizedMax),
+          },
+        };
+      }
     }
   });
+};
+
+export const parameterConfig = {
+  acousticness: { min: 0, max: 100, step: 1 },
+  danceability: { min: 0, max: 100, step: 1 },
+  energy: { min: 0, max: 100, step: 1 },
+  instrumentalness: { min: 0, max: 100, step: 1 },
+  key: { min: 0, max: 11, step: 1 },
+  duration_ms: { min: 30000, max: 3600000, step: 1000 },
+  liveness: { min: 0, max: 100, step: 1 },
+  loudness: { min: -60, max: 0, step: 0.1 },
+  mode: { min: 0, max: 1, step: 1 },
+  speechiness: { min: 0, max: 100, step: 1 },
+  tempo: { min: 40, max: 220, step: 1 },
+  time_signature: { min: 3, max: 7, step: 1 },
+  valence: { min: 0, max: 100, step: 1 },
+  popularity: { min: 0, max: 100, step: 1 },
 };
 
 export const getSliderValue = (
   param: keyof AdvancedParams,
   values: AdvancedParams[keyof AdvancedParams]
-) => {
+): number[] => {
+  const config = parameterConfig[param];
   if (param === "mode") {
     return [values.target];
   }
   const typedValues = values as { min: number; target: number; max: number };
   return [
-    normalizeValue(param, typedValues.min),
-    normalizeValue(param, typedValues.target),
-    normalizeValue(param, typedValues.max),
+    typedValues.min ?? config.min,
+    typedValues.target,
+    typedValues.max ?? config.max,
   ];
 };
 
@@ -263,39 +307,22 @@ export const normalizeValue = (
   param: keyof AdvancedParams,
   value: number
 ): number => {
-  const ranges: Record<keyof AdvancedParams, [number, number]> = {
-    acousticness: [0, 1],
-    danceability: [0, 1],
-    energy: [0, 1],
-    instrumentalness: [0, 1],
-    key: [0, 11],
-    duration_ms: [0, 600000], // 0 to 10 minutes
-    liveness: [0, 1],
-    loudness: [-60, 0], // dB
-    mode: [0, 1],
-    speechiness: [0, 1],
-    tempo: [0, 250], // BPM
-    time_signature: [3, 7],
-    valence: [0, 1],
-    popularity: [0, 100],
-  };
-  const [min, max] = ranges[param];
+  const { min, max } = parameterConfig[param];
   return ((value - min) / (max - min)) * 100;
 };
 
 export const denormalizeValue = (
   param: keyof AdvancedParams,
-  normalizedValue: number,
-  advancedParams: AdvancedParams
+  normalizedValue: number
 ): number => {
-  const { min = 0, max = 100 } = advancedParams[param] as {
-    min?: number;
-    max?: number;
-  };
+  const { min, max } = parameterConfig[param];
   return min + (normalizedValue / 100) * (max - min);
 };
 
-export const formatParamValue = (param: keyof AdvancedParams, value: number): string => {
+export const formatParamValue = (
+  param: keyof AdvancedParams,
+  value: number
+): string => {
   switch (param) {
     case "duration_ms":
       return formatTime(value / 1000);
@@ -323,7 +350,7 @@ export const formatParamValue = (param: keyof AdvancedParams, value: number): st
     case "time_signature":
       return `${Math.round(value)}/4`;
     default:
-      return value.toFixed(2);
+      return value.toFixed(0);
   }
 };
 
@@ -337,7 +364,7 @@ export const handleSaveQuery = async (
   selections: FormattedResult[],
   category: CategoryLabel,
   advancedParams: AdvancedParams,
-  setSavedQueries: React.Dispatch<React.SetStateAction<Query[]>>,
+  setSavedQueries: React.Dispatch<React.SetStateAction<Query[]>>
 ) => {
   const queryName = prompt("Enter a name for this query:");
   if (queryName) {
@@ -353,7 +380,7 @@ export const handleSaveQuery = async (
 
     try {
       const savedQuery = await saveQuery(newQuery);
-      setSavedQueries(prevQueries => [...prevQueries, savedQuery]);
+      setSavedQueries((prevQueries) => [...prevQueries, savedQuery]);
       alert("Query saved successfully!");
     } catch (error) {
       console.error("Error saving query:", error);
@@ -367,7 +394,7 @@ export const handleSelectQuery = (
   setSelections: (selections: FormattedResult[]) => void,
   setCategory: (category: CategoryLabel) => void,
   setAdvancedParams: (params: AdvancedParams) => void,
-  setSidebarMode: (mode: 'search' | 'playlists' | 'queries') => void,
+  setSidebarMode: (mode: "search" | "playlists" | "queries") => void
 ) => {
   // Implement logic to populate the search form with the selected query
   setSelections(query.parameters.selections);
@@ -377,6 +404,8 @@ export const handleSelectQuery = (
   setSidebarMode("search");
 };
 
-export const handleSwitchToSearch = (setSidebarMode: (mode: 'search' | 'playlists' | 'queries') => void) => {
+export const handleSwitchToSearch = (
+  setSidebarMode: (mode: "search" | "playlists" | "queries") => void
+) => {
   setSidebarMode("search");
 };
