@@ -4,7 +4,6 @@ import type { ActionFunction, LoaderFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { ActionData, LoginForm } from "../components/LoginForm";
 import { getSession, commitSession } from "../session.server";
-import { serverLogin, getUserDetails, setAccessToken, setRefreshToken } from "../utils/auth.server";
 
 export const loader: LoaderFunction = async ({ request }) => {
   const session = await getSession(request);
@@ -22,40 +21,33 @@ export const action: ActionFunction = async ({ request }) => {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
-  try {
-    const loginData = await serverLogin(email, password);
-    
-    if ('error' in loginData) {
-      return json({ success: false, error: loginData.error }, { status: 400 });
-    }
+  const url = new URL(request.url);
+  const origin = url.origin;
 
-    const { access, refresh, onboarding_required } = loginData;
+  const response = await fetch(`${origin}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
 
-    // Set tokens in cookies
-    const accessTokenCookie = await setAccessToken(access);
-    const refreshTokenCookie = await setRefreshToken(refresh);
+  const data = await response.json();
 
-    // Get user details
-    const userDetails = await getUserDetails(access);
-
-    // Store user details in session
-    const session = await getSession(request);
-    session.set("user", userDetails.data);
-
-    // Determine where to redirect
-    const redirectTo = onboarding_required ? "/onboarding" : "/dashboard";
-
-    // Commit the session and set cookies
-    const headers = new Headers();
-    headers.append("Set-Cookie", await commitSession(session));
-    headers.append("Set-Cookie", accessTokenCookie);
-    headers.append("Set-Cookie", refreshTokenCookie);
-
-    return redirect(redirectTo, { headers });
-  } catch (error) {
-    console.error("Login error:", error);
-    return json({ success: false, error: "Login failed" }, { status: 500 });
+  if (!data.success) {
+    return json({ error: data.error }, { status: 400 });
   }
+
+  // Get the session and set the user data
+  const session = await getSession(request);
+  session.set("user", data.user);
+  session.set("accessToken", data.accessToken);
+  session.set("refreshToken", data.refreshToken);
+
+  // Redirect with the committed session
+  return redirect(data.redirectTo, {
+    headers: {
+      "Set-Cookie": await commitSession(session),
+    },
+  });
 };
 
 export default function Login() {

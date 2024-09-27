@@ -17,7 +17,7 @@ const categoryMapping: Record<CategoryLabel, CategoryType> = {
 
 export function MobileSearchForm({
   user, 
-  getAccessToken, 
+  getSpotifyAccessToken, 
   sidebarMode, 
   setSidebarMode,
   category, 
@@ -42,9 +42,11 @@ export function MobileSearchForm({
   savedQueries,
   hoveredParam,
   setHoveredParam,
+  handleReset,
+  isLoadingQueries,
 } : { 
   user: User | null, 
-  getAccessToken: () => Promise<string | null>, 
+  getSpotifyAccessToken: () => Promise<string | null>, 
   sidebarMode: 'search' | 'playlists' | 'queries', 
   setSidebarMode: (mode: 'search' | 'playlists' | 'queries') => void,
   category: CategoryLabel,
@@ -69,6 +71,8 @@ export function MobileSearchForm({
   savedQueries: Query[],
   hoveredParam: string | null,
   setHoveredParam: (param: string | null) => void,
+  handleReset: () => void,
+  isLoadingQueries: boolean,
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const prevInputValueRef = useRef('');
@@ -79,14 +83,14 @@ export function MobileSearchForm({
       const timer = setTimeout(() => {
         if (inputValue) {
           const apiCategory = categoryMapping[category];
-          searchSpotify(inputValue, apiCategory, getAccessToken)
+          searchSpotify(inputValue, apiCategory, getSpotifyAccessToken)
             .then(results => setSuggestions(formatResults(results, category)));
         }
       }, 300);
 
       return () => clearTimeout(timer);
     }
-  }, [inputValue, category, getAccessToken, setSuggestions]);
+  }, [inputValue, category, getSpotifyAccessToken, setSuggestions]);
 
   useEffect(() => {
     prevInputValueRef.current = inputValue;
@@ -384,6 +388,13 @@ export function MobileSearchForm({
                     </div>
                   )}
                 </button>
+                <button
+                  onClick={handleReset}
+                  className="mt-2 w-full px-4 py-2 rounded transition-colors bg-gray-500 text-button-text hover:bg-gray-600"
+                  disabled={!user}
+                >
+                  Reset
+                </button>
               </div>
               <div>
                 <button
@@ -405,7 +416,12 @@ export function MobileSearchForm({
           )}
           
           {sidebarMode === 'queries' && (
-            <Queries queries={savedQueries} onSelectQuery={handleSelectQuery} onSwitchToSearch={handleSwitchToSearch} />
+            <Queries 
+              // queries={savedQueries} 
+              onSelectQuery={handleSelectQuery} 
+              onSwitchToSearch={handleSwitchToSearch}
+              isLoading={isLoadingQueries}
+            />
           )}
         </div>
       )}

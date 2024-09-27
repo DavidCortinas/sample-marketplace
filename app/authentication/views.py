@@ -106,6 +106,7 @@ class LoginView(APIView):
             login(request, user)
             refresh = RefreshToken.for_user(user)
             logger.info(f"User logged in: {email}")
+            print(f"Access token if user exists: {str(refresh.access_token)}")
 
             return Response(
                 {
@@ -291,6 +292,7 @@ def google_callback(request):
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh.access_token)
             print(f"Access token if user exists: {access_token}")
+            print(f"Refresh token if user exists: {str(refresh)}")
             return JsonResponse(
                 {
                     "success": True,

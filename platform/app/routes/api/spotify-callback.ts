@@ -17,7 +17,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   }
 
   const session = await getSession(request);
-  const userId = session.get("user")?.data.id;
+  const userId = session.get("user").id;
 
   if (!userId) {
     return redirect("/login");
@@ -34,8 +34,6 @@ export const loader: LoaderFunction = async ({ request }) => {
   if (!response.ok) {
     return redirect("/onboarding?error=spotify_token_exchange_failed");
   }
-
-  const data = await response.json();
 
   session.set("spotifyConnected", true);
   return redirect("/discover", {

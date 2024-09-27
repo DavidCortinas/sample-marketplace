@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from "@remix-run/react";
-import { User } from "../types/user";
-import { useAuthStore } from "../stores/authStore";
+import { User } from "../../types/user";
+import { useAuthStore } from "../../stores/authStore";
 
 interface AppHeaderProps {
   user: User;

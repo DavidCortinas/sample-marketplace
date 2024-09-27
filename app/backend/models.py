@@ -33,9 +33,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
     email_verified = models.BooleanField(default=False)
-    spotify_id = models.CharField(max_length=255, blank=True, null=True)
-    spotify_access_token = models.TextField(blank=True, null=True)
-    spotify_refresh_token = models.TextField(blank=True, null=True)
     onboarding_completed = models.BooleanField(default=False)
 
     objects = CustomUserManager()
@@ -80,13 +77,23 @@ def save_user_profile(sender, instance, **kwargs):
     instance.profile.save()
 
 
-class UserSpotifyAuth(models.Model):
-    user = models.OneToOneField(
-        CustomUser, on_delete=models.CASCADE, related_name="spotify_auth"
+class MusicServiceConnection(models.Model):
+    user = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name="music_service_connections"
     )
-    access_token = models.CharField(max_length=255)
-    refresh_token = models.CharField(max_length=255)
-    expires_at = models.DateTimeField()
+    service_name = models.CharField(max_length=50)
+    is_connected = models.BooleanField(default=False)
+    last_connected = models.DateTimeField(null=True, blank=True)
+    service_user_id = models.CharField(max_length=255, blank=True, null=True)
+    access_token = models.TextField(blank=True, null=True)
+    refresh_token = models.TextField(blank=True, null=True)
+    token_expires_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ("user", "service_name")
+
+    def __str__(self):
+        return f"{self.user.email} - {self.service_name} ({'Connected' if self.is_connected else 'Disconnected'})"
 
 
 class Genre(models.Model):
@@ -116,6 +123,7 @@ class Query(models.Model):
     )
     name = models.CharField(max_length=255)
     parameters = models.JSONField()
+    recommendations = models.JSONField(default=list)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

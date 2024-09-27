@@ -5,7 +5,8 @@ import {
   AdvancedParams,
   Query,
 } from "../types/recommendations/types";
-import { saveQuery } from "../api/queries";
+import { defaultAdvancedParams } from "../constants/advancedParams";
+import { useFetcher } from "@remix-run/react";
 
 export type CategoryType = "track" | "artist" | "genre";
 
@@ -94,18 +95,18 @@ export const handleInputChange = (
 export const handleSelection = (
   item: FormattedResult,
   selections: FormattedResult[],
-  setSelections: (selections: FormattedResult[]) => void,
-  setInputValue: (value: string) => void,
-  setSuggestions: (suggestions: FormattedResult[]) => void
+  setSelections: React.Dispatch<React.SetStateAction<FormattedResult[]>>,
+  setInputValue: React.Dispatch<React.SetStateAction<string>>,
+  setSuggestions: React.Dispatch<React.SetStateAction<FormattedResult[]>>
 ) => {
-  if (
-    selections.length < 5 &&
-    !selections.some((selection) => selection.id === item.id)
-  ) {
-    setSelections([...selections, item]);
-    setInputValue("");
-    setSuggestions([]);
-  }
+  const newItem = {
+    ...item,
+    type: item.artistName ? "track" : item.imageUrl ? "artist" : "genre",
+  };
+
+  setSelections((prev) => [...prev, newItem]);
+  setInputValue("");
+  setSuggestions([]);
 };
 
 export const handleRemoveSelection = (
@@ -364,27 +365,22 @@ export const handleSaveQuery = async (
   selections: FormattedResult[],
   category: CategoryLabel,
   advancedParams: AdvancedParams,
-  setSavedQueries: React.Dispatch<React.SetStateAction<Query[]>>
+  saveNewQuery: (
+    selections: FormattedResult[],
+    category: CategoryLabel,
+    advancedParams: AdvancedParams,
+    queryName: string
+  ) => void
 ) => {
   const queryName = prompt("Enter a name for this query:");
   if (queryName) {
-    const newQuery: Query = {
-      id: Date.now().toString(), // This will be replaced by the backend
-      name: queryName,
-      parameters: {
-        selections,
-        advancedParams,
-        category,
-      },
-    };
-
     try {
-      const savedQuery = await saveQuery(newQuery);
-      setSavedQueries((prevQueries) => [...prevQueries, savedQuery]);
-      alert("Query saved successfully!");
+      console.log("Attempting to save query in handleSaveQuery...");
+      saveNewQuery(selections, category, advancedParams, queryName);
+      console.log("Query save initiated");
     } catch (error) {
-      console.error("Error saving query:", error);
-      alert("Failed to save query. Please try again.");
+      console.error("Error initiating query save:", error);
+      alert(`Failed to initiate query save: ${error.message}`);
     }
   }
 };
@@ -408,4 +404,18 @@ export const handleSwitchToSearch = (
   setSidebarMode: (mode: "search" | "playlists" | "queries") => void
 ) => {
   setSidebarMode("search");
+};
+
+export const resetSearch = (
+  setSelections: (selections: FormattedResult[]) => void,
+  setCategory: (category: CategoryLabel) => void,
+  setInputValue: (value: string) => void,
+  setSuggestions: (suggestions: FormattedResult[]) => void,
+  setAdvancedParams: React.Dispatch<React.SetStateAction<AdvancedParams>>
+) => {
+  setSelections([]);
+  setCategory("Songs");
+  setInputValue("");
+  setSuggestions([]);
+  setAdvancedParams(defaultAdvancedParams);
 };

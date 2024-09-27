@@ -4,7 +4,6 @@ import { getAccessToken } from "../../utils/auth.server";
 
 export const action: ActionFunction = async ({ request }) => {
   const token = await getAccessToken(request);
-  console.log("Token:", token);
 
   if (!token) {
     return json({ error: "Not authenticated" }, { status: 401 });

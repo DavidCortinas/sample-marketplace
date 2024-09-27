@@ -3,7 +3,6 @@ import { serverLogout } from "../../../utils/auth.server";
 import { getSession, destroySession } from "../../../session.server";
 
 export const action: ActionFunction = async ({ request }) => {
-  console.log("API logout action triggered, request:", request);
 
   if (request.method !== "POST") {
     console.log("Method not allowed");

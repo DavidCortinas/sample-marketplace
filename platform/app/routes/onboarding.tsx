@@ -1,22 +1,32 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Form, useLoaderData, useFetcher, useOutletContext } from '@remix-run/react';
 import { fetchGenres } from '../api/genres';
-import { getSession, commitSession } from '../session.server';
-import { getAccessToken } from '../utils/auth.server';
+import { getSession, commitSession, requireUser } from '../session.server';
 import { ActionFunction, LoaderFunction, json, redirect } from '@remix-run/node';
 import { Combobox } from '@headlessui/react';
 import spotifyLogo from '/images/Spotify_Icon_RGB_White.png';
-import type { User } from '../types/user';
 import { useTheme } from '../hooks/useTheme';
+import { getRandomColor } from '../utils/forms';
+import { OutletContext } from '../types/outlet';
 
 export const loader: LoaderFunction = async ({ request }) => {
-  const session = await getSession(request);
-  console.log("Session:", session.data);
-  const user = session.get("user");
-  const accessToken = await getAccessToken(request);
-  console.log("Access token:", accessToken);
-  console.log("User:", user);
-  return json({ user, accessToken });
+  try {
+    const session = await getSession(request);
+
+    const user = await requireUser(request);
+
+    const accessToken = session.get("accessToken");
+
+    return json({ user, accessToken });
+  } catch (error) {
+    console.error("Error in onboarding loader:", error);
+
+    if (error instanceof Response && error.status === 302) {
+      return error;
+    }
+
+    return redirect("/login");
+  }
 };
 
 export const action: ActionFunction = async ({ request }) => {
@@ -59,11 +69,12 @@ export default function Onboarding() {
   const { accessToken } = useLoaderData<{ accessToken: string }>();
   const [step, setStep] = useState(1);
   const navigate = useNavigate();
-  const { user } = useLoaderData<{ user: User }>();
+  const { user } = useOutletContext<OutletContext>();
   const fetcher = useFetcher();
   const { isDarkMode } = useTheme();
 
   const [username, setUsername] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [birthdate, setBirthdate] = useState('');
@@ -78,7 +89,7 @@ export default function Onboarding() {
   useEffect(() => {
     const loadGenres = async () => {
       try {
-        const genres = await fetchGenres(accessToken);
+        const genres = await fetchGenres();
         setAvailableGenres(genres);
       } catch (error) {
         console.error('Error loading genres:', error);
@@ -89,7 +100,6 @@ export default function Onboarding() {
   }, [accessToken]);
 
   const handleNextStep = () => {
-    console.log("Step:", step);
     if (step < 4) {
       setStep(step + 1);
     }
@@ -97,8 +107,6 @@ export default function Onboarding() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    console.log('handleSubmit called');
-    console.log("Step:", step);
     if (step < 5) {
       handleNextStep();
       return;
@@ -177,8 +185,6 @@ export default function Onboarding() {
   }, []);
 
   const maxSteps = 4; // Now includes the Spotify connection step
-  console.log("User:", user);
-  console.log("Is Dark Mode:", isDarkMode);
 
   return (
       <div className="flex items-center justify-center min-h-screen map-overlay map-background">
@@ -191,7 +197,7 @@ export default function Onboarding() {
             <h1 className="text-3xl text-center font-bold text-gray-800">{user ? "Welcome to Audafact," : "Welcome to Audafact"}</h1>
             {user && (
               <h1 className="text-2xl text-center font-bold text-gray-800">
-                {user?.data.email}!
+                {user.email}!
               </h1>
             )}
             <p className="text-lg text-center mb-6 text-gray-600">{"Please complete the following steps to start unearthing new gems!"}</p>
@@ -356,10 +362,7 @@ export default function Onboarding() {
                   </p>
                   <button
                     type="button"
-                    onClick={() => {
-                      console.log('connect with spotify');
-                      window.location.href = '/api/spotify-auth';
-                    }}
+                    onClick={() => window.location.href = '/api/spotify-auth'}
                     className="w-full flex items-center justify-center bg-[#1DB954] text-white py-2 px-4 rounded-md hover:bg-[#1ED760] transition duration-300"
                   >
                     <img src={spotifyLogo} alt="Spotify logo" className="h-8 mr-2" />
@@ -403,15 +406,7 @@ export default function Onboarding() {
   );
 }
 
-function getRandomColor() {
-  const colors = [
-    'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-red-500',
-    'bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 'bg-teal-500'
-  ];
-  return colors[Math.floor(Math.random() * colors.length)];
-}
-
-function CheckIcon(props) {
+function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" {...props}>
       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />

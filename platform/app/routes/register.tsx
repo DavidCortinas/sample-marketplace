@@ -1,11 +1,11 @@
 import { useActionData, Form, useNavigate } from "@remix-run/react";
 import { useEffect } from "react";
-import type { ActionFunction, LoaderFunction } from "@remix-run/node";
-import { json} from "@remix-run/node";
-import { serverRegister } from "../utils/auth.server";
+import { json, redirect } from "@remix-run/node";
+import type { ActionFunction } from "@remix-run/node";
 
-export const loader: LoaderFunction = async () => {
-  return json({});
+type ActionData = {
+  success?: boolean;
+  error?: string;
 };
 
 export const action: ActionFunction = async ({ request }) => {
@@ -13,47 +13,57 @@ export const action: ActionFunction = async ({ request }) => {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
+  const url = new URL(request.url);
+  const origin = url.origin;
 
   try {
-    const result = await serverRegister(email, password);
-    const data = await result.json();
+    const response = await fetch(`${origin}/api/auth/register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    });
 
+    const data = await response.json();
 
-    if (data.success && data.access && data.refresh) {
-      return json({ success: true, access: data.access, refresh: data.refresh });
+    if (data.success) {
+      // Redirect to login page or onboarding page after successful registration
+      return redirect("/check-email?registered=true");
     } else {
-      return json({ success: false, error: data.error || data.message || "Registration failed" });
+      return json({ success: false, error: data.error }, { status: 400 });
     }
   } catch (error) {
-    console.error("REGISTER ROUTE: Error in register action:", error);
-    return json({ success: false, error: "An unexpected error occurred" });
+    console.error("Registration error:", error);
+    return json({ success: false, error: "Registration failed" }, { status: 500 });
   }
 };
 
 export default function Register() {
-  const actionData = useActionData();
+  const actionData = useActionData<ActionData>();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (actionData?.success && actionData?.access && actionData?.refresh) {
-      // Store tokens in local storage or state management
-      localStorage.setItem('accessToken', actionData.access);
-      localStorage.setItem('refreshToken', actionData.refresh);
-      navigate('/check-email');
+    if (actionData?.success) {
+      navigate('/check-email?registered=true');
     }
   }, [actionData, navigate]);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    event.currentTarget.submit();
-  };
-
   return (
-    <Form method="post" onSubmit={handleSubmit}>
-      <input type="email" name="email" required />
-      <input type="password" name="password" required />
-      <button type="submit">Register</button>
+    <div>
+      <h1>Register</h1>
+      <Form method="post">
+        <div>
+          <label htmlFor="email">Email:</label>
+          <input type="email" id="email" name="email" required />
+        </div>
+        <div>
+          <label htmlFor="password">Password:</label>
+          <input type="password" id="password" name="password" required />
+        </div>
+        <button type="submit">Register</button>
+      </Form>
       {actionData?.error && <p>{actionData.error}</p>}
-    </Form>
+    </div>
   );
 }

@@ -1,40 +1,37 @@
-import type { ActionFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
+import { serverRegister } from "../../../utils/auth.server";
 
-export const action: ActionFunction = async ({ request }) => {
-  
-  if (request.method !== "POST") {
-    return json({ error: "Method not allowed" }, { status: 405 });
+export const action = async ({ request }: { request: Request }) => {
+  // Check if the request is JSON
+  const contentType = request.headers.get("Content-Type");
+  let email, password;
+
+  if (contentType && contentType.includes("application/json")) {
+    const body = await request.json();
+    email = body.email;
+    password = body.password;
+  } else {
+    // Handle form data
+    const formData = await request.formData();
+    email = formData.get("email") as string;
+    password = formData.get("password") as string;
+  }
+
+  if (!email || !password) {
+    return json(
+      { success: false, error: "Email and password are required" },
+      { status: 400 }
+    );
   }
 
   try {
-    const contentType = request.headers.get("Content-Type");
-
-    let email, password;
-
-    if (contentType?.includes('application/json')) {
-      const body = await request.json();
-      email = body.email;
-      password = body.password;
-    } else {
-      const formData = await request.formData();
-      email = formData.get('email');
-      password = formData.get('password');
-    }
-
-    if (!email || !password) {
-      return json({ error: "Email and password are required" }, { status: 400 });
-    }
-
-    // Here, you would typically call your Django backend
-    // For now, let's simulate a successful registration
-    return json({ success: true, message: "Debug response from API route" }, {
-      headers: {
-        "Cache-Control": "no-store",
-      },
-    });
+    const data = await serverRegister(email, password);
+    return json(data);
   } catch (error) {
-    console.error("API route: Error processing request", error);
-    return json({ error: "Invalid request", details: error.message }, { status: 400 });
+    console.error("Registration error:", error);
+    return json(
+      { success: false, error: "Registration failed" },
+      { status: 500 }
+    );
   }
 };

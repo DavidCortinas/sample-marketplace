@@ -1,8 +1,8 @@
 import { useState, useRef } from 'react';
 import { Link, useNavigate, Form, useLoaderData } from "@remix-run/react";
-import { Tooltip } from './Tooltip';
-import type { User } from "../types/user";
-import { ThemeToggle } from './ThemeToggle';
+import { Tooltip } from '../Tooltip';
+import type { User } from "../../types/user";
+import { ThemeToggle } from '../ThemeToggle';
 
 export default function DiscoverHeader({ user }: { user: User | null }) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -10,16 +10,12 @@ export default function DiscoverHeader({ user }: { user: User | null }) {
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
   const avatarButtonRef = useRef<HTMLButtonElement>(null);
   const navigate = useNavigate();
-  console.log('discover header user', user)
 
   const { accessToken } = useLoaderData<{ accessToken: string }>();
-  console.log('discover header accessToken', accessToken)
 
   const { refreshToken } = useLoaderData<{ refreshToken: string }>();
-  console.log('discover header refreshToken', refreshToken)
 
-  const isAuthenticated = user && user.data;
-  console.log('discover header isAuthenticated', isAuthenticated)
+  const isAuthenticated = user;
 
   const handleImageError = () => {
     setImageError(true);
@@ -27,7 +23,6 @@ export default function DiscoverHeader({ user }: { user: User | null }) {
 
   const handleSignInOut = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (isAuthenticated) {
-      console.log("Attempting to sign out with refresh token:", refreshToken);
       e.preventDefault();
       e.currentTarget.form?.submit();
     } else {
@@ -55,8 +50,7 @@ export default function DiscoverHeader({ user }: { user: User | null }) {
           <div className="flex items-center">
             <nav className="hidden md:flex space-x-4">
               <Link to="/discover/new" className="text-header-link hover:text-header-link-hover">New Releases</Link>
-              <Link to="/discover/trending" className="text-header-link hover:text-header-link-hover">Trending</Link>
-              <Link to="/discover/genres" className="text-header-link hover:text-header-link-hover">Genres</Link>
+              <Link to="/discover/trending" className="text-header-link hover:text-header-link-hover">Featured</Link>
             </nav>
             <div className="ml-4 relative flex-shrink-0">
               <button
@@ -101,10 +95,7 @@ export default function DiscoverHeader({ user }: { user: User | null }) {
                         <button 
                           type="submit"
                           className="block w-full text-left px-4 py-2 text-sm text-header-text hover:bg-header-button-hover"
-                          onClick={(e) => {
-                            console.log("Sign Out button clicked");
-                            handleSignInOut(e);
-                          }}
+                          onClick={(e) => handleSignInOut(e)}
                         >
                           Sign Out
                         </button>

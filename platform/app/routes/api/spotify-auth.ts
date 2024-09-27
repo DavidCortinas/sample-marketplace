@@ -4,7 +4,7 @@ import { getSession } from "../../session.server";
 export const loader: LoaderFunction = async ({ request }) => {
   console.log("spotify-auth");
   const session = await getSession(request);
-  const userId = session.get("user")?.data.id;
+  const userId = session.get("user").id;
 
   if (!userId) {
     return redirect("/login");

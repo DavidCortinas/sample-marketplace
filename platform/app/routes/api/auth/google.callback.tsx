@@ -10,8 +10,6 @@ export const loader: LoaderFunction = async ({ request }) => {
   const code = url.searchParams.get("code");
   const error = url.searchParams.get("error");
 
-  console.log("Google callback URL:", url);
-
   if (code) {
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/google/callback/`, {
@@ -23,22 +21,20 @@ export const loader: LoaderFunction = async ({ request }) => {
       });
 
       const data = await response.json();
-      console.log("Google callback data:", data);
 
       if (data.access && data.refresh) {
         // Fetch user details
         const userDetailsResponse = await getUserDetails(data.access);
         const userDetails = await userDetailsResponse.json();
-        console.log("User details:", userDetails);
 
         // Store tokens in cookies
         const accessTokenCookie = await setAccessToken(data.access);
         const refreshTokenCookie = await setRefreshToken(data.refresh);
 
         // Store user details in session
-        console.log("Storing user details in session:", userDetails);
-        session.set("user", userDetails);
-        console.log("Google callback - Session before commit:", JSON.stringify(session.data, null, 2));
+        session.set("user", userDetails.data);
+        session.set("accessToken", data.access);
+        session.set("refreshToken", data.refresh);
 
         // Commit the session and set cookies
         const headers = new Headers();

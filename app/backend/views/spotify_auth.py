@@ -2,9 +2,10 @@ import os
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 import requests
 from urllib.parse import urlencode
-from ..models import CustomUser, UserProfile
+from ..models import CustomUser, UserProfile, MusicServiceConnection
 import json
 
 
@@ -22,7 +23,6 @@ def spotify_authorize(request):
         "scope": scope,
         "show_dialog": "true",
     }
-    print("redirect_uri", redirect_uri)
 
     authorization_url = f"https://accounts.spotify.com/authorize?{urlencode(params)}"
     return JsonResponse({"authorization_url": authorization_url})
@@ -70,12 +70,26 @@ def spotify_callback(request):
 
     # Update user model with Spotify info
     try:
+        print('try music service connection')
         user = CustomUser.objects.get(id=user_id)
-        user.spotify_id = spotify_profile["id"]
-        user.spotify_access_token = tokens["access_token"]
-        user.spotify_refresh_token = tokens["refresh_token"]
+        music_service_connection, created = (
+            MusicServiceConnection.objects.update_or_create(
+                user=user,
+                service_name="spotify",
+                defaults={
+                    "is_connected": True,
+                    "last_connected": timezone.now(),
+                    "service_user_id": spotify_profile["id"],
+                    "access_token": tokens["access_token"],
+                    "refresh_token": tokens["refresh_token"],
+                    "token_expires_at": timezone.now()
+                    + timezone.timedelta(seconds=tokens["expires_in"]),
+                },
+            )
+        )
 
         try:
+            print('try profile')
             profile = user.profile
             if (
                 profile.username

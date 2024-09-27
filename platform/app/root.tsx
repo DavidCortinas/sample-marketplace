@@ -1,8 +1,7 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ActionFunction, LinksFunction, LoaderFunction } from "@remix-run/node";
 import { 
   json,
-  redirect,
   Outlet, 
   useLoaderData,
   useFetcher,
@@ -16,10 +15,11 @@ import {
 import { Layout } from './components/Layout';
 import { SpotifyCredentials } from './hooks/useSpotify';
 import { getSession, commitSession } from './session.server';
-import { SpotifyScript } from './components/SpotifyScript';
 import { User } from './types/user';
 import { OutletContext } from './types/outlet';
 import { useTheme } from './hooks/useTheme';
+import { Query } from './types/recommendations/types';
+import { Playlists } from './types/playlists/types';
 import styles from "./tailwind.css?url";
 import customStyles from "./custom-style.css?url";
 
@@ -32,12 +32,12 @@ export const links: LinksFunction = () => [
 
 export const loader: LoaderFunction = async ({ request }) => {
   const session = await getSession(request);
+  const accessToken = session.get("accessToken");
   const user = session.get("user");
+  const queries = session.get("queries");
+  const playlists = session.get("playlists");
 
-  console.log("Root loader - User:", user);
-  console.log("Root loader - Full session data:", session.data);
-
-  return json({ user });
+  return json({ user, queries, playlists, accessToken });
 };
 
 export const action: ActionFunction = async ({ request }) => {
@@ -63,7 +63,7 @@ export const action: ActionFunction = async ({ request }) => {
 };
 
 export default function App() {
-  const data = useLoaderData<{ user: User | undefined, spotifyCredentials: SpotifyCredentials }>();
+  const data = useLoaderData<{ user: User | undefined, queries: Query[], playlists: Playlists, spotifyCredentials: SpotifyCredentials, accessToken: string }>();
   const fetcher = useFetcher() as FetcherWithComponents<{ spotifyCredentials: SpotifyCredentials }>;
   const { isDarkMode } = useTheme();
 
@@ -83,14 +83,16 @@ export default function App() {
         <Layout>
           <Outlet context={{ 
             user: data.user,
+            queries: data.queries,
+            playlists: data.playlists,
             spotifyCredentials: fetcher.data?.spotifyCredentials || data.spotifyCredentials,
-            refreshSpotifyToken 
+            accessToken: data.accessToken,
+            refreshSpotifyToken
           } as OutletContext}/>
         </Layout>
         <ScrollRestoration />
         <Scripts />
         <LiveReload />
-        <SpotifyScript />
       </body>
     </html>
   );

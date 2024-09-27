@@ -86,4 +86,5 @@ export interface Query {
     advancedParams: AdvancedParams;
     category: CategoryLabel;
   };
+  recommendations: string[];
 }

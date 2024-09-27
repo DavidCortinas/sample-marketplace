@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import SpotifyClientCredentialsView, SpotifyRecommendationsView
+from .views import SpotifyClientCredentialsView, SpotifyRecommendationsView, SpotifyPlaylistsView
 from .viewsets import QueryViewSet
 from backend.views import spotify_auth
 
@@ -18,6 +18,7 @@ urlpatterns = [
         SpotifyRecommendationsView.as_view(),
         name="spotify_recommendations",
     ),
+    path("playlists/", SpotifyPlaylistsView.as_view(), name="spotify_playlists"),
     path("authorize/", spotify_auth.spotify_authorize, name="spotify_authorize"),
     path(
         "callback/", spotify_auth.spotify_callback, name="spotify_callback"

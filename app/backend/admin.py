@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth import get_user_model
 from django.utils.html import format_html
-from .models import UserProfile
+from .models import UserProfile, Query, CustomUser, MusicServiceConnection
 
 User = get_user_model()
 
@@ -29,8 +29,19 @@ class profileInline(admin.StackedInline):
         return "No image uploaded"
 
 
+class MusicServiceConnectionInline(admin.TabularInline):
+    model = MusicServiceConnection
+    extra = 0
+    readonly_fields = ('service_name', 'is_connected', 'last_connected', 'service_user_id', 'token_expires_at')
+    fields = ('service_name', 'is_connected', 'last_connected', 'service_user_id', 'token_expires_at')
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 class CustomUserAdmin(UserAdmin):
-    inlines = (profileInline,)
+    inlines = (profileInline, MusicServiceConnectionInline,)
     list_display = (
         "email",
         "is_active",
@@ -39,6 +50,7 @@ class CustomUserAdmin(UserAdmin):
         "date_joined",
         "get_username",
         "get_user_type",
+        "get_connected_services",
     )
     list_filter = (
         "is_active",
@@ -86,5 +98,24 @@ class CustomUserAdmin(UserAdmin):
     get_user_type.short_description = "User Type"
     get_user_type.admin_order_field = "profile__user_type"
 
+    def get_connected_services(self, obj):
+        return ", ".join([conn.service_name for conn in obj.music_service_connections.filter(is_connected=True)])
+    get_connected_services.short_description = 'Connected Services'
+
 
 admin.site.register(User, CustomUserAdmin)
+
+admin.site.register(Query)
+
+@admin.register(MusicServiceConnection)
+class MusicServiceConnectionAdmin(admin.ModelAdmin):
+    list_display = ('user', 'service_name', 'is_connected', 'last_connected', 'token_expires_at')
+    list_filter = ('service_name', 'is_connected')
+    search_fields = ('user__email', 'service_name')
+    readonly_fields = ('user', 'service_name', 'is_connected', 'last_connected', 'service_user_id', 'token_expires_at')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

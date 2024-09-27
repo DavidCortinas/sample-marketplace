@@ -30,7 +30,7 @@ export default function CheckEmail() {
             <div className="bg-white bg-opacity-90 p-6 rounded-md">
               <h2 className="text-3xl font-bold mb-2 text-center text-gray-800">Check Your Email</h2>
               <p className="text-center text-gray-600 mb-6">
-                We've sent a verification link to your email. Please check your inbox and click the link to verify your account.
+                {"We've sent a verification link to your email. Please check your inbox and click the link to verify your account."}
               </p>
               <button 
                 onClick={() => navigate('/login')} 

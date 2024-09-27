@@ -19,7 +19,7 @@ export function useSpotify() {
     return now > expirationTime;
   }, [spotifyCredentials]);
 
-  const getAccessToken = useCallback(async () => {
+  const getSpotifyAccessToken = useCallback(async () => {
     if (isTokenExpired()) {
       try {
         const newCredentials = await refreshSpotifyToken();
@@ -38,7 +38,7 @@ export function useSpotify() {
   }, [initialCredentials]);
 
   return {
-    getAccessToken,
+    getSpotifyAccessToken,
     isAuthenticated: () => !!spotifyCredentials?.access_token,
   };
 }

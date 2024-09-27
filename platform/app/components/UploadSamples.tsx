@@ -12,6 +12,7 @@ export default function UploadSamples() {
     price: string,
     collection: string
   }>>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isUploading, setIsUploading] = useState(false);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {

@@ -1,37 +1,99 @@
-import { Outlet, useLocation, useOutletContext, useNavigate } from "@remix-run/react";
+import { Outlet, useLocation, useNavigate, useLoaderData } from "@remix-run/react";
 import { useState, useEffect, useCallback } from "react";
-import DiscoverHeader from "../components/DiscoverHeader";
-import DiscoverSidebar from "../components/DiscoverSearchForm/DiscoverSidebar";
-import { DiscoverResults } from "../components/DiscoverResults";
-import type { OutletContext } from "../types/outlet";
+import DiscoverHeader from "../components/Discover/DiscoverHeader";
+import DiscoverSidebar from "../components/Discover/DiscoverSidebar";
+import { DiscoverResults } from "../components/Discover/DiscoverResults";
 import { LoaderFunction, json } from "@remix-run/node";
-import { getAccessToken, getRefreshToken } from "../utils/auth.server";
-import { MobileSearchForm } from "../components/DiscoverSearchForm/MobileSearchForm";
+import { getAccessToken } from "../utils/auth.server";
+import { MobileSearchForm } from "../components/Discover/MobileSearchForm";
 import { useSpotify } from "../hooks/useSpotify";
-import { FormattedResult, CategoryLabel, AdvancedParams, Query } from "../types/recommendations/types";
-import { handleCategoryChange, handleInputChange, handleSelection, handleSubmit, handleParamToggle, handleParamChange, getSliderValue, formatParamValue, handleRemoveSelection, handleSaveQuery, handleSelectQuery, handleSwitchToSearch } from "../utils/discoverSearchForm";
-
-
+import { FormattedResult, CategoryLabel, AdvancedParams } from "../types/recommendations/types";
+import { 
+  handleCategoryChange, 
+  handleInputChange, 
+  handleSelection, 
+  handleSubmit, 
+  handleParamToggle, 
+  handleParamChange, 
+  getSliderValue, 
+  formatParamValue, 
+  handleRemoveSelection, 
+  handleSelectQuery, 
+  handleSwitchToSearch, 
+  resetSearch 
+} from "../utils/discoverSearchForm";
+import { useQueries } from "../hooks/useQueries";
+import { Playlist, Playlists } from "../types/playlists/types";
+import { User } from "../types/user";
+import { getSession, commitSession } from "../session.server";
 
 export const loader: LoaderFunction = async ({ request }) => {
-  const accessToken = await getAccessToken(request);
-  const refreshToken = await getRefreshToken(request);
-  console.log('discover route loader access', accessToken)
-  console.log('discover route loader refresh', refreshToken)
-  return json({ accessToken, refreshToken });
+  const session = await getSession(request);
+
+  let accessToken = null;
+  const playlists: Playlist[] = [];
+  let accessTokenError = null;
+  const playlistsError = null;
+
+  // Fetch access token
+  try {
+    accessToken = await getAccessToken(request);
+  } catch (error) {
+    console.error('Error fetching access token:', error);
+    accessTokenError = 'Failed to fetch access token';
+  }
+
+  // Fetch playlists if we have an access token
+  // if (accessToken) {
+  //   try {
+  //     playlists = await fetchPlaylists(accessToken);
+  //     // playlists = []
+  //   } catch (error) {
+  //     console.error('Error fetching playlists:', error);
+  //     playlistsError = 'Failed to fetch playlists';
+  //   }
+  // }
+
+  const user = session.get("user");
+
+  return json({
+    accessToken,
+    accessTokenError,
+    playlists,
+    playlistsError,
+    user
+  }, {
+    headers: { "Set-Cookie": await commitSession(session) },
+  });
 };
 
 export default function Discover() {
+  const { 
+    accessToken, 
+    playlists = {}, 
+    user
+  } = useLoaderData<{ 
+    accessToken: string, 
+    playlists: Playlists, 
+    accessTokenError: string, 
+    playlistsError: string, 
+    user: User 
+  }>();
+
   const location = useLocation();
+  const navigate = useNavigate();
+  
   const [recommendations, setRecommendations] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const { user } = useOutletContext<OutletContext>();
   const [isMobile, setIsMobile] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [isLoadingQueries, setIsLoadingQueries] = useState(false);
+
 
   // SEARCH FORM STATE
-    const { getAccessToken } = useSpotify();
+  const { getSpotifyAccessToken } = useSpotify();
   const [selections, setSelections] = useState<FormattedResult[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [suggestions, setSuggestions] = useState<FormattedResult[]>([]);
@@ -53,11 +115,36 @@ export default function Discover() {
     time_signature: { enabled: false, min: 1, target: 4, max: 7 },
     valence: { enabled: false, min: 0, target: 50, max: 100 },
   });
-
   const [sidebarMode, setSidebarMode] = useState<'search' | 'playlists' | 'queries'>('search');
-  const [savedQueries, setSavedQueries] = useState<Query[]>([]);
 
-  const navigate = useNavigate();
+  const { loadQueries, selectQuery, selectedQuery } = useQueries();
+
+  useEffect(() => {
+    if (user) {
+      loadQueries();
+    }
+  }, [user, loadQueries]);
+
+
+  useEffect(() => {
+    if (selectedQuery) {
+      setSelections(selectedQuery.parameters.selections.map(selection => ({
+        ...selection,
+        type: selection.type || (selection.artistName ? 'track' : selection.imageUrl ? 'artist' : 'genre'),
+        artistName: selection.artistName || '',
+        imageUrl: selection.imageUrl || '',
+      })));
+      setCategory(selectedQuery.parameters.category);
+      setAdvancedParams(selectedQuery.parameters.advancedParams);
+      setRecommendations(selectedQuery.recommendations);
+      setIsInitialLoad(false);
+      
+      setSidebarMode('search');
+    }
+  }, [selectedQuery]);
+
+  console.log(selectedQuery)
+  console.log(recommendations)
 
   useEffect(() => {
     const checkMobile = () => {
@@ -76,6 +163,12 @@ export default function Discover() {
       setIsInitialLoad(false);
     }
   }, [location.state?.recommendations]);
+
+  const clearResults = useCallback(() => {
+    setRecommendations([]);
+    setIsInitialLoad(true);
+    setHasMore(true);
+  }, []);
 
   const clearInput = () => {
     setInputValue('');
@@ -100,13 +193,22 @@ export default function Discover() {
     }, 1000);
   }, [hasMore, isLoading]);
 
+  const handleReset = useCallback(() => {
+    resetSearch(setSelections, setCategory, setInputValue, setSuggestions, setAdvancedParams);
+  }, [setSelections, setCategory, setInputValue, setSuggestions, setAdvancedParams]);
+
+  // const handleSaveQueryWrapper = useCallback(() => {
+  //   handleSaveQuery(selections, category, advancedParams, saveNewQuery);
+  // }, [selections, category, advancedParams, saveNewQuery]);
+
   return (
     <div className="flex flex-col h-screen bg-gray-100 md:flex-row">
+
       {/* Sidebar - hidden on mobile */}
       <div className="hidden md:flex md:flex-shrink-0">
         <DiscoverSidebar 
           user={user}
-          getAccessToken={getAccessToken}
+          getSpotifyAccessToken={getSpotifyAccessToken}
           sidebarMode={sidebarMode}
           setSidebarMode={setSidebarMode}
           category={category}
@@ -117,20 +219,26 @@ export default function Discover() {
           handleInputChange={(e) => handleInputChange(e, setInputValue, setSuggestions)}
           handleSelection={(item) => handleSelection(item, selections, setSelections, setInputValue, setSuggestions)}
           clearInput={clearInput}
+          clearResults={clearResults}
           handleSubmit={(e) => handleSubmit(e, selections, advancedParams, setCategory, setInputValue, setSuggestions, navigate)}
           handleParamToggle={(param) => handleParamToggle(param as keyof AdvancedParams, setAdvancedParams)}
           handleParamChange={(param, newValues) => handleParamChange(param as keyof AdvancedParams, newValues, advancedParams, setAdvancedParams)}
           getSliderValue={(param, values) => getSliderValue(param as keyof AdvancedParams, values)}
           formatParamValue={(param, value) => formatParamValue(param as keyof AdvancedParams, value)}
           handleRemoveSelection={(item) => handleRemoveSelection(item, selections, setSelections)}
-          handleSaveQuery={() => handleSaveQuery(selections, category, advancedParams, setSavedQueries)}
-          handleSelectQuery={(query) => handleSelectQuery(query, setSelections, setCategory, setAdvancedParams, setSidebarMode)}
+          // handleSaveQuery={handleSaveQueryWrapper}
+          handleSelectQuery={selectQuery}
           handleSwitchToSearch={() => handleSwitchToSearch(setSidebarMode)}
           selections={selections}
           advancedParams={advancedParams}
-          savedQueries={savedQueries}
+          // savedQueries={savedQueries}
+          isLoadingQueries={isLoadingQueries}
           hoveredParam={hoveredParam}
           setHoveredParam={setHoveredParam} 
+          handleReset={handleReset}
+          // playlists={playlists}
+          accessToken={accessToken}
+          recommendations={recommendations}
         />
       </div>
 
@@ -143,7 +251,7 @@ export default function Discover() {
             <div className="md:hidden">
               <MobileSearchForm
                 user={user}
-                getAccessToken={getAccessToken}
+                getSpotifyAccessToken={getSpotifyAccessToken}
                 sidebarMode={sidebarMode}
                 setSidebarMode={setSidebarMode}
                 category={category}
@@ -160,14 +268,16 @@ export default function Discover() {
                 getSliderValue={(param, values) => getSliderValue(param as keyof AdvancedParams, values)}
                 formatParamValue={(param, value) => formatParamValue(param as keyof AdvancedParams, value)}
                 handleRemoveSelection={(item) => handleRemoveSelection(item, selections, setSelections)}
-                handleSaveQuery={() => handleSaveQuery(selections, category, advancedParams, setSavedQueries)}
+                // handleSaveQuery={handleSaveQueryWrapper}
                 handleSelectQuery={(query) => handleSelectQuery(query, setSelections, setCategory, setAdvancedParams, setSidebarMode)}
                 handleSwitchToSearch={() => handleSwitchToSearch(setSidebarMode)}
                 selections={selections}
                 advancedParams={advancedParams}
-                savedQueries={savedQueries}
+                // savedQueries={savedQueries}
                 hoveredParam={hoveredParam}
                 setHoveredParam={setHoveredParam} 
+                handleReset={handleReset}
+                isLoadingQueries={isLoadingQueries}
               />
             </div>
             {isInitialLoad ? (
@@ -185,19 +295,12 @@ export default function Discover() {
                 </div>
               </div>
             ) : (
-              <>
-                <DiscoverResults isLoading={isLoading} results={recommendations} onLoadMore={loadMoreResults} />
-                {/* {isLoading && (
-                  <div className="text-center py-4 text-gray-600 font-semibold">
-                    Digging up more gems...
-                  </div>
-                )}
-                {!isLoading && !hasMore && recommendations.length > 0 && (
-                  <div className="text-center py-4 text-gray-600 font-semibold">
-                    {"That's all the gems we could find!"}
-                  </div>
-                )} */}
-              </>
+                <DiscoverResults 
+                  isLoading={isLoading} 
+                  results={recommendations} 
+                  onLoadMore={loadMoreResults} 
+                  isInitialLoad={isInitialLoad} 
+                />
             )}
             <Outlet />
           </div>

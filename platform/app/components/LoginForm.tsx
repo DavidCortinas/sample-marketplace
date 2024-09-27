@@ -1,5 +1,5 @@
 import { useAuthStore } from "../stores/authStore";
-import { Form, useActionData, useNavigate, useSubmit, Link } from "@remix-run/react";
+import { Form, useActionData, useNavigate, useSubmit } from "@remix-run/react";
 import { useEffect, useState } from "react";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { User } from "../types/user";

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import * as Accordion from '@radix-ui/react-accordion';
 import * as Switch from '@radix-ui/react-switch';
 import * as Slider from '@radix-ui/react-slider';
@@ -11,7 +11,11 @@ import {
   Query, 
 } from '../../types/recommendations/types';
 import type { User } from '../../types/user';
+import { useQueries } from '../../hooks/useQueries';
 import { CategoryType, searchSpotify, formatResults } from '../../utils/discoverSearchForm';
+import { PlaylistsForm } from './PlaylistsForm';
+import { Form } from '@remix-run/react';
+
 
 const categoryMapping: Record<CategoryLabel, CategoryType> = {
   'Songs': 'track',
@@ -32,7 +36,8 @@ const defaultParamConfig = { min: 0, max: 100, step: 1, formatValue: (v: number)
 
 export default function DiscoverSidebar({ 
   user, 
-  getAccessToken, 
+  accessToken,
+  getSpotifyAccessToken, 
   sidebarMode, 
   setSidebarMode,
   category, 
@@ -43,23 +48,29 @@ export default function DiscoverSidebar({
   handleInputChange,
   handleSelection, 
   clearInput,
+  clearResults,
   handleSubmit,
   handleParamToggle,
   handleParamChange,
   getSliderValue,
   formatParamValue,
   handleRemoveSelection,
-  handleSaveQuery,
+  // handleSaveQuery,
   handleSelectQuery,
   handleSwitchToSearch,
   selections,
   advancedParams,
-  savedQueries,
+  // savedQueries,
   hoveredParam,
   setHoveredParam,
+  handleReset,
+  isLoadingQueries,
+  // playlists,'
+  recommendations,
 } : { 
   user: User | null, 
-  getAccessToken: () => Promise<string | null>, 
+  accessToken: string | null,
+  getSpotifyAccessToken: () => Promise<string | null>, 
   sidebarMode: 'search' | 'playlists' | 'queries', 
   setSidebarMode: (mode: 'search' | 'playlists' | 'queries') => void,
   category: CategoryLabel,
@@ -70,37 +81,44 @@ export default function DiscoverSidebar({
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
   handleSelection: (item: FormattedResult) => void,
   clearInput: () => void,
+  clearResults: () => void,
   handleSubmit: (e: React.FormEvent) => void,
   handleParamToggle: (param: string) => void,
   handleParamChange: (param: string, newValues: number[]) => void,
   getSliderValue: (param: string, values: AdvancedParams[keyof AdvancedParams]) => number[],
   formatParamValue: (param: string, value: number) => string,
   handleRemoveSelection: (item: FormattedResult) => void,
-  handleSaveQuery: () => void,
+  // handleSaveQuery: () => void,
   handleSelectQuery: (query: Query) => void,
   handleSwitchToSearch: () => void,
   selections: FormattedResult[],
   advancedParams: AdvancedParams,
-  savedQueries: Query[],
+  // savedQueries: Query[],
   hoveredParam: string | null,
   setHoveredParam: (param: string | null) => void,
+  handleReset: () => void,
+  isLoadingQueries: boolean,
+  // playlists: Playlists,
+  recommendations: string[],
 }) {
   const prevInputValueRef = useRef('');
   const prevCategoryRef = useRef<CategoryLabel>('Songs');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { saveNewQuery } = useQueries();
 
   useEffect(() => {
     if (inputValue !== prevInputValueRef.current || category !== prevCategoryRef.current) {
       const timer = setTimeout(() => {
         if (inputValue) {
           const apiCategory = categoryMapping[category];
-          searchSpotify(inputValue, apiCategory, getAccessToken)
+          searchSpotify(inputValue, apiCategory, getSpotifyAccessToken)
             .then(results => setSuggestions(formatResults(results, category)));
         }
-      }, 300);
+      }, 100);
 
       return () => clearTimeout(timer);
     }
-  }, [inputValue, category, getAccessToken, setSuggestions]);
+  }, [inputValue, category, getSpotifyAccessToken, setSuggestions]);
 
   useEffect(() => {
     prevInputValueRef.current = inputValue;
@@ -108,6 +126,22 @@ export default function DiscoverSidebar({
   });
 
   const getSliderConfig = (param: string) => parameterConfig[param as keyof typeof parameterConfig] || defaultParamConfig;
+
+  const onSubmitQuery = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const queryName = formData.get('queryName') as string;
+    if (queryName) {
+      saveNewQuery(selections, category, advancedParams, queryName, recommendations);
+      setIsModalOpen(false);
+    }
+  };
+
+  const onSubmitSearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    clearResults();
+    handleSubmit(event);
+  };
 
   return (
     <div className="bg-bg-primary text-text-primary w-full h-full md:w-64 md:h-screen flex-shrink-0 border-r border-border overflow-y-auto flex flex-col z-40 relative">
@@ -220,9 +254,9 @@ export default function DiscoverSidebar({
               <h3 className="text-md text-center font-semibold mb-2">Selected Coordinates</h3>
               {selections.length ? ['Songs', 'Artists', 'Genres'].map((categoryLabel) => {
                 const categorySelections = selections.filter((item) => {
-                  if (categoryLabel === 'Songs') return 'artistName' in item;
-                  if (categoryLabel === 'Artists') return !('artistName' in item) && item.imageUrl;
-                  return !('artistName' in item) && !item.imageUrl;
+                  if (categoryLabel === 'Songs') return item.type === 'track';
+                  if (categoryLabel === 'Artists') return item.type === 'artist';
+                  return item.type === 'genre';
                 });
 
                 if (categorySelections.length === 0) return null;
@@ -232,8 +266,8 @@ export default function DiscoverSidebar({
                     <h4 className="text-sm font-semibold text-text-secondary mb-1">{categoryLabel}</h4>
                     {categorySelections.map((item) => (
                       <div key={item.id} className={`flex items-center justify-between bg-bg-secondary p-2 rounded-md mb-1 ${
-                        categoryLabel === 'Songs' ? 'border-l-4 border-blue-500' :
-                        categoryLabel === 'Artists' ? 'border-l-4 border-green-500' :
+                        item.type === 'track' ? 'border-l-4 border-blue-500' :
+                        item.type === 'artist' ? 'border-l-4 border-green-500' :
                         'border-l-4 border-purple-500'
                       }`}>
                         <div className="flex items-center min-w-0 flex-1">
@@ -242,7 +276,7 @@ export default function DiscoverSidebar({
                           )}
                           <div className="min-w-0 flex-1">
                             <div className="font-medium truncate">{item.name}</div>
-                            {'artistName' in item && (
+                            {item.type === 'track' && item.artistName && (
                               <div className="text-sm text-text-secondary truncate">{item.artistName}</div>
                             )}
                           </div>
@@ -369,17 +403,38 @@ export default function DiscoverSidebar({
               </Accordion.Content>
             </Accordion.Item>
           </Accordion.Root>
-          <div className="relative mb-2 px-4">
+          <div className="px-4">
             <button
-              onClick={handleSaveQuery}
-              className={`mt-4 w-full px-4 py-2 rounded transition-colors ${
+              type="submit"
+              className="w-full mx-auto block bg-button-primary text-button-text px-4 py-2 rounded-md hover:opacity-90 transition-colors"
+              onClick={onSubmitSearch}
+            >
+              Start Digging
+            </button>
+            <button
+              type="button"
+              onClick={clearResults}
+              className="mt-2 w-full px-4 py-2 rounded transition-colors bg-gray-400 text-button-text hover:bg-gray-300"
+            >
+              Clear Results
+            </button>
+            <button
+              onClick={handleReset}
+              className="mt-2 w-full px-4 py-2 rounded transition-colors bg-gray-500 text-button-text hover:bg-gray-600"
+              disabled={!user}
+            >
+              Reset Search
+            </button>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className={`mt-2 w-full px-4 py-2 rounded transition-colors ${
                 user
                   ? 'bg-blue-500 text-button-text hover:bg-blue-600'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed group'
               }`}
               disabled={!user}
             >
-              Save Query
+              Save Query & Results
               {!user && (
                 <div className="absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-gray-800 rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                   Log in to save queries
@@ -388,28 +443,56 @@ export default function DiscoverSidebar({
               )}
             </button>
           </div>
-          <div className="px-4">
-            <button
-              type="submit"
-              className="w-full mx-auto block bg-button-primary text-button-text px-4 py-2 rounded-md hover:opacity-90 transition-colors"
-              onClick={handleSubmit}
-            >
-              Start Digging
-            </button>
-          </div>
+
+          {isModalOpen && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-gradient-to-br from-white to-orange-50 rounded-2xl shadow-xl w-96 max-w-full overflow-hidden">
+                <div className="p-6">
+                  <h2 className="text-2xl font-bold mb-6 text-[#ff7043]">Save Query</h2>
+                  <Form onSubmit={onSubmitQuery}>
+                    <div className="mb-6">
+                      <input
+                        type="text"
+                        name="queryName"
+                        placeholder="Enter query name"
+                        className="w-full px-4 py-3 bg-white text-gray-600 border-2 border-[#ff7043] rounded-xl focus:outline-none focus:border-[#ff7043] transition-all duration-300 ease-in-out"
+                        required
+                      />
+                    </div>
+                    <div className="flex justify-end space-x-3">
+                      <button
+                        type="button"
+                        onClick={() => setIsModalOpen(false)}
+                        className="px-6 py-2 rounded-xl transition-all duration-300 ease-in-out bg-gray-400 text-white hover:bg-gray-500 focus:outline-none"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-6 py-2 rounded-xl transition-all duration-300 ease-in-out bg-[#ff7043] text-white hover:bg-[#ff5722] focus:outline-none"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  </Form>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
       
       {sidebarMode === 'playlists' && (
-        <div className="flex-1 overflow-y-auto p-4">
-          <h2 className="text-lg text-center font-semibold">Playlists</h2>
-          <p className="text-center text-text-secondary mt-4">Playlist functionality coming soon!</p>
-        </div>
+        <PlaylistsForm />
       )}
       
-      {sidebarMode === 'queries' && (
-        <Queries queries={savedQueries} onSelectQuery={handleSelectQuery} onSwitchToSearch={handleSwitchToSearch} />
-      )}
+    {sidebarMode === 'queries' && (
+      <Queries 
+        onSelectQuery={handleSelectQuery} 
+        onSwitchToSearch={handleSwitchToSearch}
+        isLoading={isLoadingQueries}
+      />
+    )}
     </div>
   );
 }

@@ -1,13 +1,14 @@
-import { SpotifyEmbed } from './SpotifyEmbed';
+import { SpotifyEmbed } from '../SpotifyEmbed';
 import { useCallback, useRef, useState, useEffect } from 'react';
 
 interface DiscoverResultsProps {
   results: string[];
   onLoadMore: () => void;
   isLoading: boolean;
+  isInitialLoad: boolean;
 }
 
-export function DiscoverResults({ results, onLoadMore, isLoading }: DiscoverResultsProps) {
+export function DiscoverResults({ results, onLoadMore, isLoading, isInitialLoad }: DiscoverResultsProps) {
   const observer = useRef<IntersectionObserver | null>(null);
   const [visibleResults, setVisibleResults] = useState<string[]>([]);
   const [batchSize] = useState(9); // Adjust this value based on your preference
@@ -28,6 +29,10 @@ export function DiscoverResults({ results, onLoadMore, isLoading }: DiscoverResu
       return [...prevResults, ...newResults];
     });
   }, [results, batchSize]);
+
+  if (isInitialLoad) {
+    return null;
+  }
 
   return (
     <div className="space-y-8">

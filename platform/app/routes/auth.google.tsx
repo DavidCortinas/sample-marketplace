@@ -31,7 +31,6 @@ export const action: ActionFunction = async ({ request }) => {
     }
 
     const data = await response.json();
-    console.log("Google auth response:", data);
     
     if (data.auth_url) {
       return redirect(data.auth_url);

@@ -44,29 +44,29 @@ export async function refreshToken(): Promise<string | null> {
   }
 }
 
-export function handleAxiosError(error: unknown): never {
-  if (error instanceof AxiosError) {
-    throw new Error(error.response?.data.detail || "An error occurred");
-  }
-  throw error;
-}
+// export function handleAxiosError(error: unknown): never {
+//   if (error instanceof AxiosError) {
+//     throw new Error(error.response?.data.detail || "An error occurred");
+//   }
+//   throw error;
+// }
 
-export function getAccessToken(): string | null {
-  return useAuthStore.getState().accessToken;
-}
+// export function getAccessToken(): string | null {
+//   return useAuthStore.getState().accessToken;
+// }
 
-export function getRefreshToken(): string | null {
-  return useAuthStore.getState().refreshToken;
-}
+// export function getRefreshToken(): string | null {
+//   return useAuthStore.getState().refreshToken;
+// }
 
-export function setAccessToken(token: string): void {
-  useAuthStore.getState().setTokens(token, useAuthStore.getState().refreshToken || '');
-}
+// export function setAccessToken(token: string): void {
+//   useAuthStore.getState().setTokens(token, useAuthStore.getState().refreshToken || '');
+// }
 
-export function setRefreshToken(token: string): void {
-  useAuthStore.getState().setTokens(useAuthStore.getState().accessToken || '', token);
-}
+// export function setRefreshToken(token: string): void {
+//   useAuthStore.getState().setTokens(useAuthStore.getState().accessToken || '', token);
+// }
 
-export function clearTokens(): void {
-  useAuthStore.getState().clearTokens();
-}
+// export function clearTokens(): void {
+//   useAuthStore.getState().clearTokens();
+// }

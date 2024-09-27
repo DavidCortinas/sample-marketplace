@@ -1,17 +1,27 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from backend.models import CustomUser, UserSpotifyAuth
+from backend.models import CustomUser, MusicServiceConnection
+
 
 class Command(BaseCommand):
-    help = 'Creates UserSpotifyAuth for users without one'
+    help = "Creates MusicServiceConnection for Spotify for users without one"
 
     def handle(self, *args, **options):
-        users_without_spotify_auth = CustomUser.objects.filter(spotify_auth__isnull=True)
-        for user in users_without_spotify_auth:
-            UserSpotifyAuth.objects.create(
+        users_without_spotify_connection = CustomUser.objects.exclude(
+            music_service_connections__service_name="spotify"
+        )
+        for user in users_without_spotify_connection:
+            MusicServiceConnection.objects.create(
                 user=user,
-                access_token='',
-                refresh_token='',
-                expires_at=timezone.now()
+                service_name="spotify",
+                is_connected=False,
+                last_connected=None,
+                access_token="",
+                refresh_token="",
+                token_expires_at=timezone.now(),
             )
-            self.stdout.write(self.style.SUCCESS(f'Created UserSpotifyAuth for user {user.email}'))
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Created Spotify MusicServiceConnection for user {user.email}"
+                )
+            )

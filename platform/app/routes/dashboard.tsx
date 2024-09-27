@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Outlet, useLocation, useOutletContext, useNavigate } from "@remix-run/react";
-import DashboardLayout from "../components/DashboardLayout";
-import DashboardOverview from "../components/DashboardOverview";
+import DashboardLayout from "../components/Dashboard/DashboardLayout";
+import DashboardOverview from "../components/Dashboard/DashboardOverview";
 import { OutletContext } from '../types/outlet';
 
 export default function Dashboard() {
@@ -9,7 +9,6 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const isRootDashboard = location.pathname === "/dashboard";
   const { user } = useOutletContext<OutletContext>();
-  console.log("Dashboard - user", user);
 
   useEffect(() => {
     if (user === undefined) {
@@ -18,10 +17,8 @@ export default function Dashboard() {
     }
     
     if (user === null) {
-      console.log("Dashboard - No user found, redirecting to login");
       navigate("/login");
-    } else if (!user.data.onboarding_completed) {
-      console.log("Dashboard - Onboarding not completed, redirecting to onboarding");
+    } else if (!user.onboarding_completed) {
       navigate("/onboarding");
     }
   }, [user, navigate]);

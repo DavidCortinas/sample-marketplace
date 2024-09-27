@@ -17,6 +17,8 @@ export default defineConfig({
           route("api/auth/logout", "routes/api/auth/logout.ts");
           route("api/user/details", "routes/api/user/details.ts");
           route("api/complete-onboarding", "routes/api/complete-onboarding.ts");
+          route("api/queries", "routes/api/queries.ts");
+          route("api/playlists", "routes/api/playlists.ts");
           route("api/update-session", "routes/api/update-session.ts");
           route("api/spotify-auth", "routes/api/spotify-auth.ts");
           route("api/spotify-callback", "routes/api/spotify-callback.ts");

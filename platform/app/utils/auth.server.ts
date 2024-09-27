@@ -19,7 +19,6 @@ const refreshTokenCookie = createCookie("refresh_token", {
 });
 
 export async function setAccessToken(token: string) {
-  console.log("setAccessToken token", token);
   return await accessTokenCookie.serialize(token);
 }
 
@@ -28,16 +27,14 @@ export async function setRefreshToken(token: string) {
 }
 
 export async function getAccessToken(request: Request): Promise<string | null> {
-  console.log("getAccessToken request", request);
   const cookieHeader = request.headers.get("Cookie");
-  console.log("getAccessToken cookieHeader", cookieHeader);
+
   if (!cookieHeader) return null;
 
   const token = await accessTokenCookie.parse(cookieHeader);
-  console.log("getAccessToken token", token);
+
   if (!token) return null;
 
-  // The token is no longer base64 encoded, so we can return it directly
   return token;
 }
 
@@ -57,20 +54,25 @@ export async function serverRegister(email: string, password: string) {
   try {
     const response = await serverFetch(`${AUTH_BASE_URL}/register/`, {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ email, password }),
     });
-    return json(response);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Registration failed");
+    }
+
+    return response.json();
   } catch (error) {
     console.error("Registration error in serverRegister:", error);
-    return json(
-      { success: false, error: "Registration failed" },
-      { status: 400 }
-    );
+    throw error;
   }
 }
 
 export async function serverLogin(email: string, password: string) {
-  console.log("Attempting login with email:", email);
   try {
     const response = await serverFetch(`${AUTH_BASE_URL}/login/`, {
       method: "POST",
@@ -80,11 +82,7 @@ export async function serverLogin(email: string, password: string) {
       body: JSON.stringify({ email, password }),
     });
 
-    console.log("Login response status:", response.status);
-    console.log("Login response headers:", response.headers);
-
     const data = await response.json();
-    console.log("Login response data:", data);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -98,7 +96,6 @@ export async function serverLogin(email: string, password: string) {
 }
 
 export async function getUserDetails(token: string) {
-  console.log("Getting user details with token:", token);
   try {
     const data = await serverFetch(`${AUTH_BASE_URL}/user/details/`, {
       method: "GET",
@@ -106,7 +103,6 @@ export async function getUserDetails(token: string) {
         Authorization: `Bearer ${token}`,
       },
     });
-    console.log("User details response:", data);
     return data;
   } catch (error) {
     console.error("Get user details error:", error);
@@ -129,10 +125,8 @@ export async function serverLogout(request: Request) {
     return json({ error: "No refresh token provided" }, { status: 400 });
   }
 
-  console.log("Attempting logout with access token:", accessToken);
-  console.log("Attempting logout with refresh token:", refreshToken);
   try {
-    const response = await serverFetch(`${AUTH_BASE_URL}/logout/`, {
+    await serverFetch(`${AUTH_BASE_URL}/logout/`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -140,17 +134,11 @@ export async function serverLogout(request: Request) {
       },
       body: JSON.stringify({ refresh: refreshToken }),
     });
-
-    console.log("Python API response status:", response.status);
-    console.log("Python API response body:", await response.text());
-
     // Clear the cookies
     const {
       accessToken: clearedAccessToken,
       refreshToken: clearedRefreshToken,
     } = await clearTokens();
-
-    console.log("Cleared tokens:", { clearedAccessToken, clearedRefreshToken });
 
     return json(
       { success: true },
@@ -166,19 +154,41 @@ export async function serverLogout(request: Request) {
   }
 }
 
-export async function serverRefreshToken(refreshToken: string) {
+export async function serverRefreshToken(
+  refreshToken: string
+): Promise<AuthTokens | { error: string; status: number }> {
   try {
-    const data = await serverFetch(`${AUTH_BASE_URL}/token/refresh/`, {
+    const response = await serverFetch(`${AUTH_BASE_URL}/token/refresh/`, {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ refresh: refreshToken }),
     });
-    return json<AuthTokens>({
+
+    if (!response.ok) {
+      console.error(
+        "Token refresh failed:",
+        response.status,
+        response.statusText
+      );
+      return { error: "Token refresh failed", status: response.status };
+    }
+
+    const data = await response.json();
+
+    if (!data.access) {
+      console.error("Token refresh response missing access token:", data);
+      return { error: "Invalid token refresh response", status: 500 };
+    }
+
+    return {
       access: data.access,
-      refresh: data.refresh,
-    });
+      refresh: data.refresh || refreshToken, // Use old refresh token if new one not provided
+    };
   } catch (error) {
     console.error("Server token refresh error:", error);
-    return json({ error: "Token refresh failed" }, { status: 400 });
+    return { error: "Token refresh failed", status: 500 };
   }
 }
 
@@ -188,12 +198,42 @@ export async function getAuthStatus(request: Request): Promise<boolean> {
     return false;
   }
   try {
-    const data = await serverFetch(`${AUTH_BASE_URL}/status/`, {
+    const response = await serverFetch(`${AUTH_BASE_URL}/status/`, {
       headers: { Authorization: authHeader },
     });
+    const data = await response.json();
     return data.is_authenticated;
   } catch (error) {
     console.error("Auth status check failed:", error);
     return false;
+  }
+}
+
+export async function refreshTokenIfNeeded(request: Request): Promise<AuthTokens | null> {
+  const refreshToken = await getRefreshToken(request);
+  
+  if (!refreshToken) {
+    return null;
+  }
+
+  try {
+    const response = await serverRefreshToken(refreshToken);
+    const data = await response.json();
+    
+    if ('error' in data) {
+      throw new Error(data.error);
+    }
+
+    const { access, refresh } = data;
+
+    // Set new cookies
+    const headers = new Headers();
+    headers.append("Set-Cookie", await setAccessToken(access));
+    headers.append("Set-Cookie", await setRefreshToken(refresh));
+
+    return { access, refresh };
+  } catch (error) {
+    console.error("Token refresh failed:", error);
+    return null;
   }
 }
