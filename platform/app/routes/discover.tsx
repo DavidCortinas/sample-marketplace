@@ -2,7 +2,7 @@ import { Outlet, useLocation, useNavigate, useLoaderData } from "@remix-run/reac
 import { useState, useEffect, useCallback } from "react";
 import DiscoverHeader from "../components/Discover/DiscoverHeader";
 import DiscoverSidebar from "../components/Discover/DiscoverSidebar";
-import { DiscoverResults } from "../components/Discover/DiscoverResults";
+import { MusicGrid } from "../components/Discover/MusicGrid";
 import { LoaderFunction, json } from "@remix-run/node";
 import { getAccessToken } from "../utils/auth.server";
 import { MobileSearchForm } from "../components/Discover/MobileSearchForm";
@@ -23,9 +23,10 @@ import {
   resetSearch 
 } from "../utils/discoverSearchForm";
 import { useQueries } from "../hooks/useQueries";
-import { Playlist, Playlists } from "../types/playlists/types";
+import { Playlist } from "../types/playlists/types";
 import { User } from "../types/user";
 import { getSession, commitSession } from "../session.server";
+import { usePlaylists } from "../hooks/usePlaylists";
 
 export const loader: LoaderFunction = async ({ request }) => {
   const session = await getSession(request);
@@ -70,11 +71,9 @@ export const loader: LoaderFunction = async ({ request }) => {
 export default function Discover() {
   const { 
     accessToken, 
-    playlists = {}, 
     user
   } = useLoaderData<{ 
     accessToken: string, 
-    playlists: Playlists, 
     accessTokenError: string, 
     playlistsError: string, 
     user: User 
@@ -117,13 +116,31 @@ export default function Discover() {
   });
   const [sidebarMode, setSidebarMode] = useState<'search' | 'playlists' | 'queries'>('search');
 
-  const { loadQueries, selectQuery, selectedQuery } = useQueries();
+  const { 
+    loadQueries, 
+    selectQuery, 
+    selectedQuery, 
+    savedQueries, 
+    queriesError, 
+    saveNewQuery 
+  } = useQueries();
+
+  const {
+    savedPlaylists,
+    selectedPlaylist,
+    loadPlaylists,
+    selectPlaylist,
+    isLoadingPlaylists,
+    error
+  } = usePlaylists();
+  console.log('selectedPlaylist', selectedPlaylist?.tracks.items);
 
   useEffect(() => {
     if (user) {
       loadQueries();
+      loadPlaylists();
     }
-  }, [user, loadQueries]);
+  }, [user, loadQueries, loadPlaylists]);
 
 
   useEffect(() => {
@@ -200,6 +217,7 @@ export default function Discover() {
   // const handleSaveQueryWrapper = useCallback(() => {
   //   handleSaveQuery(selections, category, advancedParams, saveNewQuery);
   // }, [selections, category, advancedParams, saveNewQuery]);
+  console.log('recommendations', recommendations);
 
   return (
     <div className="flex flex-col h-screen bg-gray-100 md:flex-row">
@@ -239,6 +257,14 @@ export default function Discover() {
           // playlists={playlists}
           accessToken={accessToken}
           recommendations={recommendations}
+          savedPlaylists={savedPlaylists}
+          selectPlaylist={selectPlaylist}
+          isLoadingPlaylists={isLoadingPlaylists}
+          error={error}
+          selectedPlaylist={selectedPlaylist}
+          savedQueries={savedQueries}
+          queriesError={queriesError}
+          saveNewQuery={saveNewQuery}
         />
       </div>
 
@@ -295,7 +321,7 @@ export default function Discover() {
                 </div>
               </div>
             ) : (
-                <DiscoverResults 
+                <MusicGrid 
                   isLoading={isLoading} 
                   results={recommendations} 
                   onLoadMore={loadMoreResults} 

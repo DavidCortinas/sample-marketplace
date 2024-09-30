@@ -70,7 +70,8 @@ def spotify_callback(request):
 
     # Update user model with Spotify info
     try:
-        print('try music service connection')
+        print("try music service connection")
+        print("tokens", tokens)
         user = CustomUser.objects.get(id=user_id)
         music_service_connection, created = (
             MusicServiceConnection.objects.update_or_create(
@@ -87,9 +88,39 @@ def spotify_callback(request):
                 },
             )
         )
+        print("music_service_connection", music_service_connection)
+        print("music_service_connection.user", music_service_connection.user)
+        print(
+            "music_service_connection.service_name",
+            music_service_connection.service_name,
+        )
+        print(
+            "music_service_connection.is_connected",
+            music_service_connection.is_connected,
+        )
+        print(
+            "music_service_connection.last_connected",
+            music_service_connection.last_connected,
+        )
+        print(
+            "music_service_connection.service_user_id",
+            music_service_connection.service_user_id,
+        )
+        print(
+            "music_service_connection.access_token",
+            music_service_connection.access_token,
+        )
+        print(
+            "music_service_connection.refresh_token",
+            music_service_connection.refresh_token,
+        )
+        print(
+            "music_service_connection.token_expires_at",
+            music_service_connection.token_expires_at,
+        )
 
         try:
-            print('try profile')
+            print("try profile")
             profile = user.profile
             if (
                 profile.username
@@ -102,7 +133,7 @@ def spotify_callback(request):
                 user.onboarding_completed = False
         except UserProfile.DoesNotExist:
             user.onboarding_completed = False
-
+        print("saving user")
         user.save()
     except CustomUser.DoesNotExist:
         return JsonResponse({"error": "User not found"}, status=404)

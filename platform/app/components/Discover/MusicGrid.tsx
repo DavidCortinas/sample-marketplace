@@ -1,14 +1,14 @@
 import { SpotifyEmbed } from '../SpotifyEmbed';
 import { useCallback, useRef, useState, useEffect } from 'react';
 
-interface DiscoverResultsProps {
+interface MusicGridProps {
   results: string[];
   onLoadMore: () => void;
   isLoading: boolean;
   isInitialLoad: boolean;
 }
 
-export function DiscoverResults({ results, onLoadMore, isLoading, isInitialLoad }: DiscoverResultsProps) {
+export function MusicGrid({ results, onLoadMore, isLoading, isInitialLoad }: MusicGridProps) {
   const observer = useRef<IntersectionObserver | null>(null);
   const [visibleResults, setVisibleResults] = useState<string[]>([]);
   const [batchSize] = useState(9); // Adjust this value based on your preference

@@ -19,9 +19,17 @@ urlpatterns = [
         name="spotify_recommendations",
     ),
     path("playlists/", SpotifyPlaylistsView.as_view(), name="spotify_playlists"),
-    path("authorize/", spotify_auth.spotify_authorize, name="spotify_authorize"),
     path(
-        "callback/", spotify_auth.spotify_callback, name="spotify_callback"
+        "playlists/<str:playlist_id>/",
+        SpotifyPlaylistsView.as_view(),
+        name="spotify_playlist_detail",
     ),
+    path(
+        "playlists/<str:playlist_id>/tracks/",
+        SpotifyPlaylistsView.as_view(),
+        name="spotify_playlist_tracks",
+    ),
+    path("authorize/", spotify_auth.spotify_authorize, name="spotify_authorize"),
+    path("callback/", spotify_auth.spotify_callback, name="spotify_callback"),
     path("", include(router.urls)),  # Include the router URLs
 ]

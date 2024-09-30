@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import * as Accordion from '@radix-ui/react-accordion';
 import * as Switch from '@radix-ui/react-switch';
 import * as Slider from '@radix-ui/react-slider';
@@ -11,10 +11,11 @@ import {
   Query, 
 } from '../../types/recommendations/types';
 import type { User } from '../../types/user';
-import { useQueries } from '../../hooks/useQueries';
 import { CategoryType, searchSpotify, formatResults } from '../../utils/discoverSearchForm';
 import { PlaylistsForm } from './PlaylistsForm';
+import { Playlist } from '../../types/playlists/types';
 import { Form } from '@remix-run/react';
+import { getRandomColorClass } from '../../utils/forms';
 
 
 const categoryMapping: Record<CategoryLabel, CategoryType> = {
@@ -67,6 +68,14 @@ export default function DiscoverSidebar({
   isLoadingQueries,
   // playlists,'
   recommendations,
+  savedPlaylists,
+  selectedPlaylist,
+  selectPlaylist,
+  isLoadingPlaylists,
+  error,
+  saveNewQuery,
+  savedQueries,
+  queriesError,
 } : { 
   user: User | null, 
   accessToken: string | null,
@@ -100,11 +109,38 @@ export default function DiscoverSidebar({
   isLoadingQueries: boolean,
   // playlists: Playlists,
   recommendations: string[],
+  savedPlaylists: Playlist[],
+  selectedPlaylist: Playlist,
+  selectPlaylist: (playlist: Playlist) => void,
+  isLoadingPlaylists: boolean,
+  error: string,
+  saveNewQuery: (queryName: string, selections: FormattedResult[], category: CategoryLabel, advancedParams: AdvancedParams, recommendations: string[]) => void,
+  savedQueries: Query[],
+  queriesError: string,
 }) {
   const prevInputValueRef = useRef('');
   const prevCategoryRef = useRef<CategoryLabel>('Songs');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { saveNewQuery } = useQueries();
+
+  const colorClassRefs = useMemo(() => {
+    const colors: { [key: string]: string } = {};
+    
+    // Generate colors for playlists
+    if (savedPlaylists && savedPlaylists.items) {
+      savedPlaylists.items.forEach((playlist) => {
+        colors[`playlist_${playlist.id}`] = getRandomColorClass();
+      });
+    }
+    
+    // Generate colors for queries
+    if (savedQueries) {
+      savedQueries.forEach((query) => {
+        colors[`query_${query.id}`] = getRandomColorClass();
+      });
+    }
+    
+    return colors;
+  }, [savedPlaylists, savedQueries]);
 
   useEffect(() => {
     if (inputValue !== prevInputValueRef.current || category !== prevCategoryRef.current) {
@@ -483,14 +519,24 @@ export default function DiscoverSidebar({
       )}
       
       {sidebarMode === 'playlists' && (
-        <PlaylistsForm />
+        <PlaylistsForm 
+          savedPlaylists={savedPlaylists}
+          selectedPlaylist={selectedPlaylist}
+          selectPlaylist={selectPlaylist}
+          isLoadingPlaylists={isLoadingPlaylists}
+          error={error}
+          colorClassRefs={colorClassRefs}
+          />
       )}
       
     {sidebarMode === 'queries' && (
       <Queries 
         onSelectQuery={handleSelectQuery} 
         onSwitchToSearch={handleSwitchToSearch}
-        isLoading={isLoadingQueries}
+        isLoadingQueries={isLoadingQueries}
+        queriesError={queriesError}
+        savedQueries={savedQueries}
+        colorClassRefs={colorClassRefs}
       />
     )}
     </div>

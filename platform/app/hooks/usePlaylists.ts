@@ -1,75 +1,51 @@
-import { useState, useCallback, useEffect } from 'react';
-import { useFetcher } from '@remix-run/react';
-import { Playlist } from '../types/playlists/types'; // Assuming you have a Playlist type defined
+import { useState, useCallback, useEffect } from "react";
+import { useFetcher } from "@remix-run/react";
+import { Playlist } from "../types/playlists/types";
 
 export const usePlaylists = () => {
   const [savedPlaylists, setSavedPlaylists] = useState<Playlist[]>([]);
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const fetcher = useFetcher();
+  console.log("fetcher", fetcher);
+  console.log("fetcher.data", fetcher.data);
+  console.log("savedPlaylists", savedPlaylists);
 
   const loadPlaylists = useCallback(() => {
-    if (fetcher.state === 'idle' && !fetcher.data) {
-      fetcher.load('/api/playlists');
+    console.log("Loading playlists");
+    if (isInitialLoad || savedPlaylists.length === 0) {
+      setIsLoadingPlaylists(true);
+      fetcher.load("/api/playlists");
     }
-  }, [fetcher]);
+  }, [fetcher, isInitialLoad, savedPlaylists.length]);
+
+  const selectPlaylist = useCallback((playlistId: string) => {
+    const playlist = savedPlaylists.items.find(p => p.id === playlistId);
+    setSelectedPlaylist(playlist || null);
+  }, [savedPlaylists]);
 
   useEffect(() => {
-    loadPlaylists();
-  }, [loadPlaylists]);
-
-  useEffect(() => {
-    if (fetcher.data && !fetcher.data.error) {
-      setSavedPlaylists(fetcher.data);
+    if (fetcher.state === 'idle' && fetcher.data) {
+      console.log("fetcher.data", fetcher.data);
+      setIsLoadingPlaylists(false);
+      setIsInitialLoad(false);
+      if (fetcher.data.error) {
+        setError(fetcher.data.error);
+      } else {
+        setSavedPlaylists(fetcher.data);
+        setError(null);
+      }
     }
-  }, [fetcher.data]);
-
-  const saveNewPlaylist = useCallback(
-    (playlistData: Omit<Playlist, 'id'>) => {
-      const formData = new FormData();
-      formData.append('playlistData', JSON.stringify(playlistData));
-      fetcher.submit(formData, {
-        method: 'post',
-        action: '/api/playlists',
-      });
-    },
-    [fetcher]
-  );
-
-  const selectPlaylist = useCallback((playlist: Playlist) => {
-    setSelectedPlaylist(playlist);
-  }, []);
-
-  const updatePlaylist = useCallback(
-    (playlistId: string, updatedData: Partial<Playlist>) => {
-      const formData = new FormData();
-      formData.append('playlistData', JSON.stringify(updatedData));
-      fetcher.submit(formData, {
-        method: 'put',
-        action: `/api/playlists/${playlistId}`,
-      });
-    },
-    [fetcher]
-  );
-
-  const deletePlaylist = useCallback(
-    (playlistId: string) => {
-      fetcher.submit(null, {
-        method: 'delete',
-        action: `/api/playlists/${playlistId}`,
-      });
-    },
-    [fetcher]
-  );
+  }, [fetcher.state, fetcher.data]);
 
   return {
     savedPlaylists,
-    loadPlaylists,
-    saveNewPlaylist,
-    selectPlaylist,
     selectedPlaylist,
-    updatePlaylist,
-    deletePlaylist,
-    isLoading: fetcher.state !== 'idle',
-    error: fetcher.data?.error,
+    isLoadingPlaylists,
+    error,
+    loadPlaylists,
+    selectPlaylist,
   };
 };

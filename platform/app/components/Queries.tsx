@@ -1,39 +1,34 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Query } from '../types/recommendations/types';
 import { Tooltip } from './Tooltip';
-import { getRandomColor } from '../utils/forms';
-import { useQueries } from '../hooks/useQueries';
+import { getRandomColorClass } from '../utils/forms';
 
 interface QueriesProps {
   onSelectQuery: (query: Query) => void;
   onSwitchToSearch: () => void;
-  isLoading: boolean;
+  isLoadingQueries: boolean;
+  savedQueries: Query[];
+  queriesError: string;
+  colorClassRefs: { [key: string]: string };
 }
 
-export function Queries({ onSelectQuery, onSwitchToSearch }: QueriesProps) {
-  const { savedQueries, loadQueries, isLoading, error } = useQueries();
+export function Queries({ 
+  onSelectQuery, 
+  onSwitchToSearch, 
+  savedQueries, 
+  isLoadingQueries, 
+  queriesError,
+  colorClassRefs
+}: QueriesProps) {
   const [hoveredQueryId, setHoveredQueryId] = useState<string | null>(null);
   const buttonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
-  const colorRefs = useRef<{ [key: string]: string }>({});
-  useEffect(() => {
-    loadQueries();
-  }, [loadQueries]);
 
-  useEffect(() => {
-    // Generate colors for each query once when the component mounts or queries change
-    savedQueries.forEach((query) => {
-      if (!colorRefs.current[query.id]) {
-        colorRefs.current[query.id] = getRandomColor();
-      }
-    });
-  }, [savedQueries]);
-
-  if (isLoading) {
+  if (isLoadingQueries) {
     return <div className="p-4">Loading saved queries...</div>;
   }
 
-  if (error) {
-    return <div className="p-4">Error loading saved queries: {error}</div>;
+  if (queriesError) {
+    return <div className="p-4">Error loading saved queries: {queriesError}</div>;
   }
 
   if (!savedQueries || savedQueries.length === 0) {
@@ -67,7 +62,7 @@ export function Queries({ onSelectQuery, onSwitchToSearch }: QueriesProps) {
           >
             <button 
               ref={(el) => buttonRefs.current[query.id] = el}
-              className={`w-full px-4 py-2 rounded-full text-sm text-white text-center font-medium transition-colors ${colorRefs.current[query.id]} text-left`}
+              className={`w-full px-4 py-2 rounded-full text-sm text-white text-center font-medium transition-colors ${colorClassRefs[`query_${query.id}`]} text-left`}
               onClick={() => onSelectQuery(query)}
             >
               <span className="truncate block">{query.name}</span>

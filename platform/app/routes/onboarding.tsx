@@ -6,7 +6,7 @@ import { ActionFunction, LoaderFunction, json, redirect } from '@remix-run/node'
 import { Combobox } from '@headlessui/react';
 import spotifyLogo from '/images/Spotify_Icon_RGB_White.png';
 import { useTheme } from '../hooks/useTheme';
-import { getRandomColor } from '../utils/forms';
+import { getRandomColorClass } from '../utils/forms';
 import { OutletContext } from '../types/outlet';
 
 export const loader: LoaderFunction = async ({ request }) => {
@@ -338,7 +338,7 @@ export default function Onboarding() {
                       {preferredGenres.map((genre) => (
                         <span
                           key={genre}
-                          className={`px-2 py-1 rounded-full text-sm font-semibold text-white ${getRandomColor()}`}
+                          className={`px-2 py-1 rounded-full text-sm font-semibold text-white ${getRandomColorClass()}`}
                         >
                           {genre}
                           <button

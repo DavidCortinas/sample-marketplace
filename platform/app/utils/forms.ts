@@ -1,4 +1,4 @@
-export function getRandomColor() {
+export function getRandomColorClass() {
   const colors = [
     "bg-blue-500",
     "bg-green-500",

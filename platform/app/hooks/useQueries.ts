@@ -81,6 +81,6 @@ export const useQueries = () => {
     selectQuery,
     selectedQuery,
     isLoading: fetcher.state !== "idle",
-    error: fetcher.data?.error,
+    queriesError: fetcher.data?.error,
   };
 };

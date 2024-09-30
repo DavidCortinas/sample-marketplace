@@ -7,6 +7,8 @@ export async function serverFetch(url: string, options: RequestInit = {}) {
   console.log("Server fetch URL:", url);
   console.log("Server fetch options:", options);
   const fullUrl = url.startsWith("http") ? url : `${BASE_URL}${url}`;
+  console.log("Full URL:", fullUrl);
+  console.log("Server fetch options:", options);
 
   const response = await fetch(fullUrl, options);
 
@@ -24,6 +26,8 @@ export async function authenticatedFetch(
   options: RequestInit & { request: Request },
   retryCount = 0
 ): Promise<Response> {
+  console.log("Authenticated fetch URL:", url);
+  console.log("Authenticated fetch options:", options);
   const session = await getSession(options.request);
   const accessToken = session.get("accessToken");
   const refreshToken = session.get("refreshToken");
@@ -42,6 +46,8 @@ export async function authenticatedFetch(
   };
 
   try {
+    console.log("Fetching URL:", url);
+    console.log("Fetching options:", fetchOptions);
     const response = await serverFetch(url, fetchOptions);
     return response;
   } catch (error) {
@@ -71,6 +77,7 @@ export async function authenticatedFetch(
             "Content-Type": "application/json",
           },
         };
+        console.log("Retrying URL:", url);
         return serverFetch(url, retryOptions);
       } catch (refreshError) {
         console.error("Error refreshing token:", refreshError);

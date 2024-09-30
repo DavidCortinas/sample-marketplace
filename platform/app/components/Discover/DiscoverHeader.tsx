@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, Form, useLoaderData } from "@remix-run/react";
 import { Tooltip } from '../Tooltip';
 import type { User } from "../../types/user";
@@ -30,6 +30,21 @@ export default function DiscoverHeader({ user }: { user: User | null }) {
     }
     setIsUserMenuOpen(false);
   };
+
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node) && !avatarButtonRef.current?.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   return (
     <header className="bg-header-bg border-b border-header-border">
@@ -84,7 +99,7 @@ export default function DiscoverHeader({ user }: { user: User | null }) {
                 />
               )}
               {isUserMenuOpen && (
-                <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-header-bg ring-1 ring-black ring-opacity-5 z-50">
+                <div ref={menuRef} className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-header-bg ring-1 ring-black ring-opacity-5 z-50">
                   {isAuthenticated && (
                     <>
                       <Link to="/profile" className="block px-4 py-2 text-sm text-header-text hover:bg-header-button-hover">Your Profile</Link>
