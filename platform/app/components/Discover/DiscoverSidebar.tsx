@@ -13,7 +13,7 @@ import {
 import type { User } from '../../types/user';
 import { CategoryType, searchSpotify, formatResults } from '../../utils/discoverSearchForm';
 import { PlaylistsForm } from './PlaylistsForm';
-import { Playlist } from '../../types/playlists/types';
+import { Playlist, Track } from '../../types/playlists/types';
 import { Form } from '@remix-run/react';
 import { getRandomColorClass } from '../../utils/forms';
 
@@ -56,21 +56,27 @@ export default function DiscoverSidebar({
   getSliderValue,
   formatParamValue,
   handleRemoveSelection,
-  // handleSaveQuery,
   handleSelectQuery,
   handleSwitchToSearch,
   selections,
   advancedParams,
-  // savedQueries,
   hoveredParam,
   setHoveredParam,
   handleReset,
   isLoadingQueries,
-  // playlists,'
   recommendations,
   savedPlaylists,
   selectedPlaylist,
   selectPlaylist,
+  selectedPlaylistTracks,
+  totalPlaylists,
+  limit,
+  hasMore,
+  loadMore,
+  loadPrevious,
+  changeLimit,
+  deletePlaylist,
+  isDeletingPlaylist,
   isLoadingPlaylists,
   error,
   saveNewQuery,
@@ -110,36 +116,63 @@ export default function DiscoverSidebar({
   // playlists: Playlists,
   recommendations: string[],
   savedPlaylists: Playlist[],
-  selectedPlaylist: Playlist,
+  selectedPlaylist: Playlist | null,
   selectPlaylist: (playlist: Playlist) => void,
+  selectedPlaylistTracks: Track[],
+  totalPlaylists: number,
+  limit: number,
+  offset: number,
+  loadMore: () => void,
+  loadPrevious: () => void,
+  changeLimit: (newLimit: number) => void,
+  deletePlaylist: (playlistId: string) => void,
+  isDeletingPlaylist: boolean,
   isLoadingPlaylists: boolean,
   error: string,
+  currentPage: number,
+  totalPages: number,
   saveNewQuery: (queryName: string, selections: FormattedResult[], category: CategoryLabel, advancedParams: AdvancedParams, recommendations: string[]) => void,
   savedQueries: Query[],
   queriesError: string,
 }) {
   const prevInputValueRef = useRef('');
   const prevCategoryRef = useRef<CategoryLabel>('Songs');
+  const colorClassRefsRef = useRef<{ [key: string]: string }>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const colorClassRefs = useMemo(() => {
-    const colors: { [key: string]: string } = {};
-    
+  useEffect(() => {
+    const storedColors = localStorage.getItem('colorClassRefs');
+    if (storedColors) {
+      colorClassRefsRef.current = JSON.parse(storedColors);
+    }
+
+    let hasNewItems = false;
+
     // Generate colors for playlists
-    if (savedPlaylists && savedPlaylists.items) {
-      savedPlaylists.items.forEach((playlist) => {
-        colors[`playlist_${playlist.id}`] = getRandomColorClass();
+    if (savedPlaylists) {
+      savedPlaylists.forEach((playlist) => {
+        const key = `playlist_${playlist.id}`;
+        if (!(key in colorClassRefsRef.current)) {
+          colorClassRefsRef.current[key] = getRandomColorClass();
+          hasNewItems = true;
+        }
       });
     }
     
     // Generate colors for queries
     if (savedQueries) {
       savedQueries.forEach((query) => {
-        colors[`query_${query.id}`] = getRandomColorClass();
+        const key = `query_${query.id}`;
+        if (!(key in colorClassRefsRef.current)) {
+          colorClassRefsRef.current[key] = getRandomColorClass();
+          hasNewItems = true;
+        }
       });
     }
     
-    return colors;
+    if (hasNewItems) {
+      localStorage.setItem('colorClassRefs', JSON.stringify(colorClassRefsRef.current));
+    }
   }, [savedPlaylists, savedQueries]);
 
   useEffect(() => {
@@ -520,13 +553,21 @@ export default function DiscoverSidebar({
       
       {sidebarMode === 'playlists' && (
         <PlaylistsForm 
-          savedPlaylists={savedPlaylists}
-          selectedPlaylist={selectedPlaylist}
-          selectPlaylist={selectPlaylist}
-          isLoadingPlaylists={isLoadingPlaylists}
           error={error}
-          colorClassRefs={colorClassRefs}
-          />
+          colorClassRefs={colorClassRefsRef.current}
+          selectPlaylist={selectPlaylist}
+          selectedPlaylist={selectedPlaylist}
+          totalPlaylists={totalPlaylists}
+          limit={limit}
+          hasMore={hasMore}
+          loadMore={loadMore}
+          loadPrevious={loadPrevious}
+          changeLimit={changeLimit}
+          deletePlaylist={deletePlaylist}
+          isLoadingPlaylists={isLoadingPlaylists}
+          isDeletingPlaylist={isDeletingPlaylist}
+          savedPlaylists={savedPlaylists}
+        />
       )}
       
     {sidebarMode === 'queries' && (
@@ -536,7 +577,7 @@ export default function DiscoverSidebar({
         isLoadingQueries={isLoadingQueries}
         queriesError={queriesError}
         savedQueries={savedQueries}
-        colorClassRefs={colorClassRefs}
+        colorClassRefs={colorClassRefsRef.current}
       />
     )}
     </div>
