@@ -14,6 +14,7 @@ export const useQueries = () => {
 
   const loadQueries = useCallback(() => {
     if (fetcher.state === "idle" && !fetcher.data) {
+      console.log("Loading queries");
       fetcher.load("/api/queries");
     }
   }, [fetcher]);

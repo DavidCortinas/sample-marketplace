@@ -43,7 +43,6 @@ export const action: ActionFunction = async ({ request }) => {
     let queryData;
     try {
       queryData = JSON.parse(queryDataString);
-      console.log("Received query data:", queryData);
     } catch (error) {
       console.error("Error parsing queryData:", error);
       return json({ error: "Invalid query data format" }, { status: 400 });
@@ -65,8 +64,6 @@ export const action: ActionFunction = async ({ request }) => {
       },
       recommendations: queryData.recommendations,
     };
-
-    console.log("Processed queryData:", processedQueryData);
 
     const response = await authenticatedFetch("/spotify/queries/", {
       method: "POST",

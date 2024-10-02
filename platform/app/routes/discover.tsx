@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate, useLoaderData } from "@remix-run/react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import DiscoverHeader from "../components/Discover/DiscoverHeader";
 import DiscoverSidebar from "../components/Discover/DiscoverSidebar";
 import { MusicGrid } from "../components/Discover/MusicGrid";
@@ -82,13 +82,15 @@ export default function Discover() {
   const location = useLocation();
   const navigate = useNavigate();
   
+  const [selectedTab, setSelectedTab] = useState<'recommendations' | 'playlist'>('recommendations');
   const [recommendations, setRecommendations] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const [localHasMore, setLocalHasMore] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isLoadingQueries, setIsLoadingQueries] = useState(false);
+  const initialLoadRef = useRef(true);
 
 
   // SEARCH FORM STATE
@@ -128,17 +130,39 @@ export default function Discover() {
   const {
     savedPlaylists,
     selectedPlaylist,
+    selectedPlaylistTracks,
+    totalPlaylists,
+    limit,
+    offset,
     loadPlaylists,
+    loadMore,
+    loadPrevious,
     selectPlaylist,
+    changeLimit,
     isLoadingPlaylists,
-    error
+    isLoadingSelectedPlaylist,
+    playlistsError,
+    deletePlaylist,
+    isDeletingPlaylist,
+    currentPage,
+    totalPages,
+    loadPage,
   } = usePlaylists();
-  console.log('selectedPlaylist', selectedPlaylist?.tracks.items);
+
+  const playlistTrackDetails = selectedPlaylistTracks?.items.map(item => ({
+    uri: item.track.uri,
+    name: item.track.name,
+    artists: item.track.artists.map((artist: { name: string }) => artist.name).join(', ')
+  })) || [];
 
   useEffect(() => {
     if (user) {
-      loadQueries();
-      loadPlaylists();
+      if (initialLoadRef.current) {
+        console.log('loading queries and playlists');
+        loadQueries();
+        loadPlaylists();
+        initialLoadRef.current = false;
+      }
     }
   }, [user, loadQueries, loadPlaylists]);
 
@@ -160,9 +184,6 @@ export default function Discover() {
     }
   }, [selectedQuery]);
 
-  console.log(selectedQuery)
-  console.log(recommendations)
-
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768); // Adjust this breakpoint as needed
@@ -181,10 +202,17 @@ export default function Discover() {
     }
   }, [location.state?.recommendations]);
 
+  useEffect(() => {
+  if (selectedPlaylist && selectedPlaylistTracks) {
+    setIsInitialLoad(false);
+    setSelectedTab('playlist');
+  }
+}, [selectedPlaylist, selectedPlaylistTracks]);
+
   const clearResults = useCallback(() => {
     setRecommendations([]);
     setIsInitialLoad(true);
-    setHasMore(true);
+    setLocalHasMore(true);
   }, []);
 
   const clearInput = () => {
@@ -193,7 +221,7 @@ export default function Discover() {
   };
 
   const loadMoreResults = useCallback(() => {
-    if (!hasMore || isLoading) return;
+    if (!localHasMore || isLoading) return;
 
     setIsLoading(true);
     // Simulate loading more results
@@ -201,23 +229,18 @@ export default function Discover() {
       setRecommendations(prev => {
         const newRecommendations = [...prev, ...Array(5).fill('').map(() => `spotify:track:${Math.random().toString(36).substr(2, 9)}`)];
         if (newRecommendations.length >= 100) {
-          setHasMore(false);
+          setLocalHasMore(false);
         }
         return newRecommendations.slice(0, 100); // Ensure we never exceed 100 results
       });
       setIsLoading(false);
       setIsInitialLoad(false);
     }, 1000);
-  }, [hasMore, isLoading]);
+  }, [localHasMore, isLoading]);
 
   const handleReset = useCallback(() => {
     resetSearch(setSelections, setCategory, setInputValue, setSuggestions, setAdvancedParams);
   }, [setSelections, setCategory, setInputValue, setSuggestions, setAdvancedParams]);
-
-  // const handleSaveQueryWrapper = useCallback(() => {
-  //   handleSaveQuery(selections, category, advancedParams, saveNewQuery);
-  // }, [selections, category, advancedParams, saveNewQuery]);
-  console.log('recommendations', recommendations);
 
   return (
     <div className="flex flex-col h-screen bg-gray-100 md:flex-row">
@@ -259,12 +282,24 @@ export default function Discover() {
           recommendations={recommendations}
           savedPlaylists={savedPlaylists}
           selectPlaylist={selectPlaylist}
-          isLoadingPlaylists={isLoadingPlaylists}
-          error={error}
           selectedPlaylist={selectedPlaylist}
+          selectedPlaylistTracks={selectedPlaylistTracks}
+          totalPlaylists={totalPlaylists}
+          limit={limit}
+          offset={offset}
+          loadMore={loadMore}
+          loadPrevious={loadPrevious}
+          changeLimit={changeLimit}
+          deletePlaylist={deletePlaylist}
+          isDeletingPlaylist={isDeletingPlaylist}
+          isLoadingPlaylists={isLoadingPlaylists}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          error={playlistsError}
           savedQueries={savedQueries}
           queriesError={queriesError}
           saveNewQuery={saveNewQuery}
+          loadPage={loadPage}
         />
       </div>
 
@@ -272,7 +307,7 @@ export default function Discover() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <DiscoverHeader user={user} />
         <main className="flex-1 overflow-x-hidden overflow-y-auto map-background map-overlay">
-          <div className="container mx-auto px-6 py-8 h-3/4">
+          <div className="container mx-auto px-6 py-2 h-3/4">
             {/* Mobile search form - visible on mobile */}
             <div className="md:hidden">
               <MobileSearchForm
@@ -306,28 +341,37 @@ export default function Discover() {
                 isLoadingQueries={isLoadingQueries}
               />
             </div>
-            {isInitialLoad ? (
-              <div className="flex justify-center items-start my-12 md:items-center h-full">
-                <div className="bg-gradient-to-br from-orange-400 to-pink-500 p-4 rounded-lg shadow-md max-w-md w-full text-white">
-                  <h2 className="text-2xl font-bold mb-4">Ready to Discover?</h2>
-                  <p className="mb-6 text-orange-100">
-                    {`Use the control panel ${isMobile ? 'above' : 'in the sidebar'} to start digging up musical gems! Adjust your preferences and watch as we unearth tracks tailored just for you.`}
-                  </p>
-                  <div className="flex justify-center">
-                    <svg className="w-12 h-12 text-white opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            ) : (
-                <MusicGrid 
-                  isLoading={isLoading} 
-                  results={recommendations} 
-                  onLoadMore={loadMoreResults} 
-                  isInitialLoad={isInitialLoad} 
-                />
-            )}
+            <div className="mb-4 flex justify-center space-x-2">
+              <button 
+                onClick={() => setSelectedTab('recommendations')}
+                className={`px-6 py-2 w-1/6 rounded-full font-semibold transition-all duration-300 ease-in-out ${
+                  selectedTab === 'recommendations'
+                    ? 'bg-button-primary text-white'
+                    : 'border-2 border-button-primary text-button-primary hover:bg-button-primary hover:text-white'
+                }`}
+              >
+                Recommendations
+              </button>
+              <button 
+                onClick={() => setSelectedTab('playlist')}
+                className={`px-6 py-2 w-1/6 rounded-full truncate font-semibold transition-all duration-300 ease-in-out ${
+                  selectedTab === 'playlist'
+                    ? 'bg-button-primary text-white'
+                    : 'border-2 border-button-primary text-button-primary hover:bg-button-primary hover:text-white'
+                }`}
+              >
+                {isLoadingSelectedPlaylist ? 'Loading...' : selectedPlaylist ? selectedPlaylist.name : 'Selected Playlist'}
+              </button>
+            </div>
+            <MusicGrid 
+              recommendations={recommendations}
+              playlistTracks={playlistTrackDetails}
+              onLoadMore={loadMoreResults} 
+              isLoading={isLoadingSelectedPlaylist} 
+              isInitialLoad={isInitialLoad} 
+              selectedTab={selectedTab}
+              isMobile={isMobile}
+            />
             <Outlet />
           </div>
         </main>

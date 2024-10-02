@@ -82,6 +82,7 @@ export default function DiscoverSidebar({
   saveNewQuery,
   savedQueries,
   queriesError,
+  loadPage,
 } : { 
   user: User | null, 
   accessToken: string | null,
@@ -134,6 +135,7 @@ export default function DiscoverSidebar({
   saveNewQuery: (queryName: string, selections: FormattedResult[], category: CategoryLabel, advancedParams: AdvancedParams, recommendations: string[]) => void,
   savedQueries: Query[],
   queriesError: string,
+  loadPage: (page: number) => void,
 }) {
   const prevInputValueRef = useRef('');
   const prevCategoryRef = useRef<CategoryLabel>('Songs');
@@ -567,6 +569,7 @@ export default function DiscoverSidebar({
           isLoadingPlaylists={isLoadingPlaylists}
           isDeletingPlaylist={isDeletingPlaylist}
           savedPlaylists={savedPlaylists}
+          loadPage={loadPage}
         />
       )}
       

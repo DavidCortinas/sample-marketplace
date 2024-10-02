@@ -78,12 +78,9 @@ class SpotifyClientCredentialsView(View):
 
             response.raise_for_status()
             token_info = response.json()
-            print(f"Token info: {token_info}")
 
             access_token = token_info["access_token"]
-            print(f"Access token: {access_token}")
             expires_in = token_info["expires_in"]
-            print(f"Expires in: {expires_in}")
 
             logger.info(
                 f"New token obtained: {access_token[:10]}... Expires in: {expires_in}"
@@ -209,8 +206,6 @@ class SpotifyUserDetailView(APIView):
 
     def get(self, request):
         try:
-            print("SpotifyUserDetailView.get method called")
-            print(request.user)
             response = self.spotify_client.make_spotify_request(
                 request, "https://api.spotify.com/v1/me"
             )
@@ -241,7 +236,6 @@ class SpotifyUserDetailView(APIView):
 
 
 class SpotifyPlaylistsView(APIView):
-    print("SpotifyPlaylistsView class is being loaded")
     authentication_classes = [DebugJWTAuthentication]
     permission_classes = [IsAuthenticated]  # Uncomment this line
 
@@ -270,16 +264,8 @@ class SpotifyPlaylistsView(APIView):
         return self.unfollow_playlist(request, playlist_id)
 
     def get_playlists(self, request):
-        print(f"Authenticated user in get_playlists: {request.user}")
         try:
-            # First, get the user's Spotify profile
-            print("Getting user's Spotify profile")
-            print(request)
-            print(request.user)
-            print(request.headers)
-            print(request.body)
             user_response = self.user_detail_view.get(request)
-            print(f"User detail response: {user_response.status_code}")
             if user_response.status_code != 200:
                 logger.error(f"Failed to get user details: {user_response.data}")
                 return user_response
@@ -333,7 +319,7 @@ class SpotifyPlaylistsView(APIView):
         try:
             response = self.spotify_client.make_spotify_request(
                 request,
-                f"https://api.spotify.com/v1/playlists/{playlist_id}",
+                f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks",
             )
 
             logger.debug(f"Playlist response: {response.status_code} - {response.text}")
@@ -539,7 +525,7 @@ class SpotifyPlaylistsView(APIView):
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-    def delete(self, request, playlist_id=None, *args, **kwargs):
+    def unfollow_playlist(self, request, playlist_id=None, *args, **kwargs):
         if not playlist_id:
             return Response(
                 {"error": "Playlist ID is required"}, status=status.HTTP_400_BAD_REQUEST

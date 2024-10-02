@@ -1,24 +1,43 @@
 import { json, LoaderFunction } from "@remix-run/node";
 import { authenticatedFetch } from "../../utils/api.server";
-import { getSession } from "../../session.server";
 
-let cachedPlaylists: any = null;
-let lastFetchTime: number = 0;
+interface CachedData {
+  data: any;
+  timestamp: number;
+}
+
+const playlistCache: { [key: string]: CachedData } = {};
 const CACHE_DURATION = 60000; // 1 minute in milliseconds
 
 export const loader: LoaderFunction = async ({ request, params }) => {
+  console.log("API/PLAYLISTS LOADER CALLED", {
+    url: request.url,
+    method: request.method,
+  });
   const url = new URL(request.url);
   const playlistId = url.searchParams.get("playlistId");
+  const limit = url.searchParams.get("limit") || "20";
+  const offset = url.searchParams.get("offset") || "0";
 
-  // If fetching all playlists and cache is valid, return cached data
-  if (!playlistId && cachedPlaylists && (Date.now() - lastFetchTime) < CACHE_DURATION) {
-    return json(cachedPlaylists);
+  console.log("Incoming request for playlists:", { playlistId, limit, offset });
+
+  // Create a cache key that includes limit and offset
+  const cacheKey = playlistId ? playlistId : `all_${limit}_${offset}`;
+
+  // Check if we have a valid cached response for this specific request
+  if (
+    playlistCache[cacheKey] &&
+    Date.now() - playlistCache[cacheKey].timestamp < CACHE_DURATION
+  ) {
+    console.log("Returning cached playlists for", cacheKey);
+    return json(playlistCache[cacheKey].data);
   }
 
   try {
     let response;
     if (playlistId) {
       // Get a single playlist
+      console.log("Fetching single playlist:", playlistId);
       response = await authenticatedFetch(`/spotify/playlists/${playlistId}/`, {
         method: "GET",
         headers: {
@@ -29,7 +48,8 @@ export const loader: LoaderFunction = async ({ request, params }) => {
     } else {
       // Get all playlists
       console.log("Fetching all playlists");
-      response = await authenticatedFetch("/spotify/playlists/", {
+      let url = `/spotify/playlists/?limit=${limit}&offset=${offset}`;
+      response = await authenticatedFetch(url, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -40,19 +60,16 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 
     const data = await response.json();
 
-    // Update cache if fetching all playlists
-    if (!playlistId) {
-      cachedPlaylists = data;
-      lastFetchTime = Date.now();
-    }
+    // Cache the new data
+    playlistCache[cacheKey] = {
+      data: data,
+      timestamp: Date.now(),
+    };
 
     return json(data);
   } catch (error) {
-    console.error("Error fetching playlist(s):", error);
-    if (error instanceof Error && error.message.includes("Please log in again")) {
-      return json({ error: "Your session has expired. Please log in again." }, { status: 401 });
-    }
-    return json({ error: "Failed to fetch playlist(s)" }, { status: 500 });
+    console.error("Error fetching playlists:", error);
+    return json({ error: "Failed to fetch playlists" }, { status: 500 });
   }
 };
 
@@ -86,34 +103,46 @@ export const action: ActionFunction = async ({ request }) => {
         });
         break;
       case "add_items":
-        response = await authenticatedFetch(`/spotify/playlists/${playlistId}/`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(playlistData),
-          request,
-        });
+        response = await authenticatedFetch(
+          `/spotify/playlists/${playlistId}/`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(playlistData),
+            request,
+          }
+        );
         break;
       case "reorder_items":
-        response = await authenticatedFetch(`/spotify/playlists/${playlistId}/`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(playlistData),
-          request,
-        });
+        response = await authenticatedFetch(
+          `/spotify/playlists/${playlistId}/`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(playlistData),
+            request,
+          }
+        );
         break;
       case "remove_items":
-        response = await authenticatedFetch(`/spotify/playlists/${playlistId}/?action=remove_items`, {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(playlistData),
-          request,
-        });
+        response = await authenticatedFetch(
+          `/spotify/playlists/${playlistId}/?action=remove_items`,
+          {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(playlistData),
+            request,
+          }
+        );
         break;
       case "delete":
-        response = await authenticatedFetch(`/spotify/playlists/${playlistId}/`, {
-          method: "DELETE",
-          request,
-        });
+        response = await authenticatedFetch(
+          `/spotify/playlists/${playlistId}/`,
+          {
+            method: "DELETE",
+            request,
+          }
+        );
         break;
       default:
         return json({ error: "Invalid action" }, { status: 400 });
