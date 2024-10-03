@@ -148,6 +148,7 @@ export default function Discover() {
     currentPage,
     totalPages,
     loadPage,
+    removeTrackFromPlaylist,
   } = usePlaylists();
 
   const playlistTrackDetails = selectedPlaylistTracks?.items.map(item => ({
@@ -396,6 +397,7 @@ export default function Discover() {
               isInitialLoad={isInitialLoad} 
               selectedTab={selectedTab}
               isMobile={isMobile}
+              removeTrackFromPlaylist={removeTrackFromPlaylist}
             />
             <Outlet />
           </div>

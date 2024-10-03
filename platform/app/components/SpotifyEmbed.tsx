@@ -6,15 +6,18 @@ interface SpotifyEmbedProps {
   uri: string;
   selectedPlaylist: Playlist | null;
   playlistTracks: PlaylistTracksResponse | null;
+  removeTrackFromPlaylist: (playlistId: string, trackUri: string) => void;
 }
 
 const TrackActions: React.FC<{ 
   uri: string; 
   selectedPlaylist: Playlist | null;
   playlistTracks: PlaylistTracksResponse | null;
-}> = ({ uri, selectedPlaylist, playlistTracks }) => {
+  removeTrackFromPlaylist: (playlistId: string, trackUri: string) => void;
+}> = ({ uri, selectedPlaylist, playlistTracks, removeTrackFromPlaylist }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
   
   const likeButtonRef = useRef<HTMLButtonElement>(null);
   const existingPlaylistButtonRef = useRef<HTMLButtonElement>(null);
@@ -41,9 +44,17 @@ const TrackActions: React.FC<{
     console.log(`${isLiked ? 'Unliked' : 'Liked'} track: ${uri}`);
   };
 
-  const handleAddToExistingPlaylist = () => {
-    if (isTrackInPlaylist) {
-      console.log(`Track is already in the playlist: ${uri}`);
+  const handleAddToExistingPlaylist = async () => {
+    if (isTrackInPlaylist && selectedPlaylist) {
+      setIsRemoving(true);
+      try {
+        await removeTrackFromPlaylist(selectedPlaylist.id, uri);
+        console.log(`Removed track from playlist: ${uri}`);
+      } catch (error) {
+        console.error('Failed to remove track from playlist:', error);
+      } finally {
+        setIsRemoving(false);
+      }
     } else {
       console.log(`Add to existing playlist: ${uri}`);
     }
@@ -89,13 +100,16 @@ const TrackActions: React.FC<{
         onClick={handleAddToExistingPlaylist}
         onMouseEnter={() => showTooltip('existing')}
         onMouseLeave={hideTooltip}
+        disabled={isRemoving}
         className={`w-8 h-8 flex items-center justify-center rounded-full ${
           isTrackInPlaylist
             ? 'bg-green-500 text-white'
             : 'bg-gradient-to-r from-pink-400 to-orange-400 text-white'
-        } hover:from-pink-500 hover:to-orange-500 transition-colors shadow-md hover:shadow-lg`}
+        } hover:from-pink-500 hover:to-orange-500 transition-colors shadow-md hover:shadow-lg ${
+          isRemoving ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        {isTrackInPlaylist ? '✓' : '📁'}
+        {isRemoving ? '⏳' : isTrackInPlaylist ? '✓' : '📁'}
       </button>
       {activeTooltip === 'existing' && existingPlaylistButtonRef.current && (
         <Tooltip 
@@ -128,7 +142,7 @@ const TrackActions: React.FC<{
 // Simple cache to store loaded tracks
 const loadedTracks = new Set<string>();
 
-export function SpotifyEmbed({ uri, selectedPlaylist, playlistTracks }: SpotifyEmbedProps) {
+export function SpotifyEmbed({ uri, selectedPlaylist, playlistTracks, removeTrackFromPlaylist }: SpotifyEmbedProps) {
   const [trackId, setTrackId] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -156,7 +170,7 @@ export function SpotifyEmbed({ uri, selectedPlaylist, playlistTracks }: SpotifyE
         }
       },
       {
-        rootMargin: '100px', // Start loading when within 100px of viewport
+        rootMargin: '100px', // Start loading when within 200px of viewport
         threshold: 0.1
       }
     );
@@ -172,12 +186,9 @@ export function SpotifyEmbed({ uri, selectedPlaylist, playlistTracks }: SpotifyE
     };
   }, [trackId]);
 
-  useEffect(() => {
-    if (isVisible) {
-      const timer = setTimeout(() => setIsLoading(false), 1000); // Simulate loading time
-      return () => clearTimeout(timer);
-    }
-  }, [isVisible]);
+  const handleIframeLoad = () => {
+    setIsLoading(false);
+  };
 
   if (error) {
     return null;
@@ -191,19 +202,23 @@ export function SpotifyEmbed({ uri, selectedPlaylist, playlistTracks }: SpotifyE
     <div ref={ref} className="h-[152px] w-full relative">
       {(isVisible || loadedTracks.has(trackId)) && (
         <>
-          {isLoading ? (
+          {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-md">
               <p className="text-gray-600 font-semibold">Unearthing find...</p>
             </div>
-          ) : (
-            <TrackActions 
-              uri={uri} 
-              selectedPlaylist={selectedPlaylist}
-              playlistTracks={playlistTracks}
-            />
           )}
+          <TrackActions 
+            uri={uri} 
+            selectedPlaylist={selectedPlaylist}
+            playlistTracks={playlistTracks}
+            removeTrackFromPlaylist={removeTrackFromPlaylist}
+          />
           <iframe 
-            style={{ borderRadius: '12px', opacity: isLoading ? 0 : 1, transition: 'opacity 0.3s' }}
+            style={{ 
+              borderRadius: '12px', 
+              opacity: isLoading ? 0 : 1, 
+              transition: 'opacity 0.3s' 
+            }}
             src={`https://open.spotify.com/embed/track/${trackId}?utm_source=generator`} 
             width="100%" 
             height="152" 
@@ -212,7 +227,8 @@ export function SpotifyEmbed({ uri, selectedPlaylist, playlistTracks }: SpotifyE
             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
             loading="lazy"
             title="Spotify Embed"
-          ></iframe>
+            onLoad={handleIframeLoad}
+          />
         </>
       )}
     </div>

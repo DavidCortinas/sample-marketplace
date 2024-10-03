@@ -1,5 +1,6 @@
-import { json, LoaderFunction } from "@remix-run/node";
+import { ActionFunction, json, LoaderFunction } from "@remix-run/node";
 import { authenticatedFetch } from "../../utils/api.server";
+import { getSession, commitSession } from "../../session.server";
 
 interface CachedData {
   data: any;
@@ -78,8 +79,8 @@ export const action: ActionFunction = async ({ request }) => {
 
   try {
     const formData = await request.formData();
-    const playlistDataString = formData.get("playlistData") as string;
     const action = formData.get("action") as string;
+    const playlistDataString = formData.get("playlistData") as string;
 
     let playlistData;
     try {

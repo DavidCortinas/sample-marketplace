@@ -183,6 +183,56 @@ export const usePlaylists = () => {
     loadPlaylists(newOffset);
   }, [limit, loadPlaylists]);
 
+  const removeTrackFromPlaylist = useCallback(
+    async (playlistId: string, trackUri: string) => {
+      console.log(`Removing track ${trackUri} from playlist ${playlistId}`);
+      try {
+        const formData = new FormData();
+        formData.append("action", "remove_items");
+        formData.append(
+          "playlistData",
+          JSON.stringify({
+            id: playlistId,
+            tracks: [{ uri: trackUri }],
+          })
+        );
+
+        const response = await fetch("/api/playlists", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log("Track removed successfully:", result);
+
+        // Update the local state to reflect the change
+        if (selectedPlaylist && selectedPlaylist.id === playlistId) {
+          setSelectedPlaylistTracks((prevTracks) => {
+            if (prevTracks) {
+              return {
+                ...prevTracks,
+                items: prevTracks.items.filter(
+                  (item) => item.track.uri !== trackUri
+                ),
+              };
+            }
+            return prevTracks;
+          });
+        }
+
+        return result;
+      } catch (error) {
+        console.error("Error removing track from playlist:", error);
+        throw error;
+      }
+    },
+    [selectedPlaylist]
+  );
+
   return {
     savedPlaylists,
     selectedPlaylist,
@@ -211,5 +261,6 @@ export const usePlaylists = () => {
     currentPage: Math.floor(offset / limit) + 1,
     totalPages: Math.ceil(totalPlaylists / limit),
     loadPage,
+    removeTrackFromPlaylist,
   };
 };

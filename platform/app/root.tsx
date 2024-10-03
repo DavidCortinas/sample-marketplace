@@ -78,6 +78,14 @@ export default function App() {
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <Meta />
         <Links />
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            window.onSpotifyIframeApiReady = (IFrameAPI) => {
+              console.log('Spotify iFrame API is ready');
+              window.SpotifyIframeApi = IFrameAPI;
+            };
+          `
+        }} />
       </head>
       <body>
         <Layout>

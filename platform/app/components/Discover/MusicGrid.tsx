@@ -12,6 +12,7 @@ interface MusicGridProps {
   selectedTab: 'recommendations' | 'playlist';
   isMobile: boolean;
   selectedPlaylist: string | null;
+  removeTrackFromPlaylist: (playlistId: string, trackUri: string) => void;
 }
 
 // eslint-disable-next-line react/prop-types
@@ -30,16 +31,9 @@ export function MusicGrid({
   isInitialLoad, 
   selectedTab,
   isMobile,
-  selectedPlaylist
+  selectedPlaylist,
+  removeTrackFromPlaylist
 }: MusicGridProps) {
-  console.log('MusicGrid rendered', { 
-    recommendations, 
-    playlistTracks, 
-    isLoading, 
-    isInitialLoad, 
-    selectedTab,
-    isMobile 
-  });
 
   const observer = useRef<IntersectionObserver | null>(null);
   const [visibleResults, setVisibleResults] = useState<string[]>([]);
@@ -183,7 +177,12 @@ export function MusicGrid({
             ref={index === visibleResults.length - 1 ? lastItemRef : null}
             className="relative group"
           >
-            <SpotifyEmbed uri={result} selectedPlaylist={selectedPlaylist} playlistTracks={playlistTracks}/>
+            <SpotifyEmbed 
+              uri={result} 
+              selectedPlaylist={selectedPlaylist} 
+              playlistTracks={playlistTracks}
+              removeTrackFromPlaylist={removeTrackFromPlaylist}
+            />
             {index === visibleResults.length - 2 && (
               <div ref={lastResultRef} style={{ height: '1px' }} />
             )}
