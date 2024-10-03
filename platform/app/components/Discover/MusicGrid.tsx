@@ -30,6 +30,15 @@ export function MusicGrid({
   selectedTab,
   isMobile
 }: MusicGridProps) {
+  console.log('MusicGrid rendered', { 
+    recommendations, 
+    playlistTracks, 
+    isLoading, 
+    isInitialLoad, 
+    selectedTab,
+    isMobile 
+  });
+
   const observer = useRef<IntersectionObserver | null>(null);
   const [visibleResults, setVisibleResults] = useState<string[]>([]);
   const [batchSize] = useState(9);
@@ -111,8 +120,43 @@ export function MusicGrid({
     }
   }, [hasLocalTracks, selectedTab, addToast, removeToast, toasts]);
 
-  if (isInitialLoad) {
-    return null;
+  console.log('Visible results:', visibleResults);
+  console.log('Selected tab:', selectedTab);
+
+  if (isInitialLoad || results.length === 0) {
+    if (selectedTab === 'recommendations') {
+      return (
+        <div className="flex justify-center items-start my-12 md:items-center h-full">
+          <div className="bg-gradient-to-br from-orange-400 to-pink-500 p-4 rounded-lg shadow-md max-w-md w-full text-white">
+            <h2 className="text-2xl font-bold mb-4">Ready to Discover?</h2>
+            <p className="mb-6 text-orange-100">
+              {`Use the control panel ${isMobile ? 'above' : 'in the sidebar'} to start digging up musical gems! Adjust your preferences and watch as we unearth tracks tailored just for you.`}
+            </p>
+            <div className="flex justify-center">
+              <svg className="w-12 h-12 text-white opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      );
+    } else {
+      return (
+        <div className="flex justify-center items-start my-12 md:items-center h-full">
+          <div className="bg-gradient-to-br from-orange-400 to-pink-500 p-4 rounded-lg shadow-md max-w-md w-full text-white">
+            <h2 className="text-2xl font-bold mb-4">This playlist is empty</h2>
+            <p className="mb-6 text-orange-100">
+              {`There are no tracks in this playlist. Use the recommendation engine ${isMobile ? 'above' : 'in the sidebar'} to unearth and add new tracks.`}
+            </p>
+            <div className="flex justify-center">
+              <svg className="w-12 h-12 text-white opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+              </svg>
+            </div>
+          </div>
+        </div> 
+      );
+    }
   }
 
   return visibleResults.length ? (
@@ -136,6 +180,7 @@ export function MusicGrid({
             <div 
               key={`${result}-${index}-${resultsKey}`} 
               ref={index === visibleResults.length - 1 ? lastResultRef : null}
+              className="relative group"
             >
               <SpotifyEmbed uri={result} />
             </div>
@@ -148,7 +193,7 @@ export function MusicGrid({
       )}
       <ToastContainer toasts={toasts} onClose={removeToast} position="bottom-right" />
     </div>
-  ) : (
+  ) : selectedTab === 'recommendations' ? (
     <div className="flex justify-center items-start my-12 md:items-center h-full">
       <div className="bg-gradient-to-br from-orange-400 to-pink-500 p-4 rounded-lg shadow-md max-w-md w-full text-white">
         <h2 className="text-2xl font-bold mb-4">Ready to Discover?</h2>
@@ -162,6 +207,19 @@ export function MusicGrid({
         </div>
       </div>
     </div>
+  ) : (
+    <div className="flex justify-center items-start my-12 md:items-center h-full">
+      <div className="bg-gradient-to-br from-orange-400 to-pink-500 p-4 rounded-lg shadow-md max-w-md w-full text-white">
+        <h2 className="text-2xl font-bold mb-4">This playlist is empty</h2>
+        <p className="mb-6 text-orange-100">
+          {`There are no tracks in this playlist. Use the recommendation engine ${isMobile ? 'above' : 'in the sidebar'} to unearth and add new tracks.`}
+        </p>
+        <div className="flex justify-center">
+          <svg className="w-12 h-12 text-white opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+          </svg>
+        </div>
+      </div>
+    </div> 
   );
 }
-

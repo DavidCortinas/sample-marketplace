@@ -4,6 +4,50 @@ interface SpotifyEmbedProps {
   uri: string;
 }
 
+const TrackActions: React.FC<{ uri: string }> = ({ uri }) => {
+  const [isLiked, setIsLiked] = useState(false);
+
+  const handleLikeToggle = () => {
+    setIsLiked(!isLiked);
+    console.log(`${isLiked ? 'Unliked' : 'Liked'} track: ${uri}`);
+  };
+
+  const handleAddToExistingPlaylist = () => {
+    console.log(`Add to existing playlist: ${uri}`);
+  };
+
+  const handleAddToNewPlaylist = () => {
+    console.log(`Add to new playlist: ${uri}`);
+  };
+
+  return (
+    <div className="absolute bottom-2 right-12 flex space-x-2 transition-opacity duration-300">
+      <button
+        onClick={handleLikeToggle}
+        className={`w-8 h-8 flex items-center justify-center rounded-full ${
+          isLiked 
+            ? 'bg-pink-500 text-white' 
+            : 'bg-pink-400 text-pink-500'
+        } hover:bg-pink-600 hover:text-white transition-colors shadow-md hover:shadow-lg`}
+      >
+        {isLiked ? '❤️' : '🤍'}
+      </button>
+      <button
+        onClick={handleAddToExistingPlaylist}
+        className="w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-pink-400 to-orange-400 text-white hover:from-pink-500 hover:to-orange-500 transition-colors shadow-md hover:shadow-lg"
+      >
+        📁
+      </button>
+      <button
+        onClick={handleAddToNewPlaylist}
+        className="w-8 h-8 flex items-center justify-center rounded-full bg-orange-400 text-white hover:bg-orange-500 transition-colors shadow-md hover:shadow-lg"
+      >
+        ➕
+      </button>
+    </div>
+  );
+};
+
 // Simple cache to store loaded tracks
 const loadedTracks = new Set<string>();
 
@@ -70,10 +114,12 @@ export function SpotifyEmbed({ uri }: SpotifyEmbedProps) {
     <div ref={ref} className="h-[152px] w-full relative">
       {(isVisible || loadedTracks.has(trackId)) && (
         <>
-          {isLoading && (
+          {isLoading ? (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-md">
               <p className="text-gray-600 font-semibold">Unearthing find...</p>
             </div>
+          ) : (
+            <TrackActions uri={uri} />
           )}
           <iframe 
             style={{ borderRadius: '12px', opacity: isLoading ? 0 : 1, transition: 'opacity 0.3s' }}

@@ -345,8 +345,8 @@ class SpotifyPlaylistsView(APIView):
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-    def post(self, request, *args, **kwargs):
-        logger.info("SpotifyPlaylistsView.post method called")
+    def create_playlist(self, request):
+        logger.info("SpotifyPlaylistsView.create_playlist method called")
         logger.debug(f"Request user: {request.user}")
         logger.debug(f"Request data: {request.data}")
 
@@ -359,15 +359,15 @@ class SpotifyPlaylistsView(APIView):
 
             user_id = user_response.data.get("id")
 
-            # Prepare the request data
+            # Prepare the request data for playlist creation
             playlist_data = {
                 "name": request.data.get("name", "New Playlist"),
-                "description": request.data.get("description", ""),
+                "description": request.data.get("description", "Created with Audafact"),
                 "public": request.data.get("public", True),
             }
 
             # Create the playlist
-            response = self.spotify_client.make_spotify_request(
+            create_response = self.spotify_client.make_spotify_request(
                 request,
                 f"https://api.spotify.com/v1/users/{user_id}/playlists",
                 method="POST",
@@ -375,35 +375,47 @@ class SpotifyPlaylistsView(APIView):
             )
 
             logger.debug(
-                f"Create playlist response: {response.status_code} - {response.text}"
+                f"Create playlist response: {create_response.status_code} - {create_response.text}"
             )
 
-            if response.status_code == 201:
-                logger.info("Successfully created playlist")
-                return Response(response.json(), status=status.HTTP_201_CREATED)
-            else:
+            if create_response.status_code != 201:
                 logger.error(
-                    f"Spotify API error: {response.status_code} - {response.text}"
+                    f"Spotify API error: {create_response.status_code} - {create_response.text}"
                 )
                 return Response(
                     {
-                        "error": f"Spotify API error: {response.status_code} - {response.text}"
+                        "error": f"Spotify API error: {create_response.status_code} - {create_response.text}"
                     },
-                    status=response.status_code,
+                    status=create_response.status_code,
                 )
 
+            # Get the new playlist ID
+            new_playlist = create_response.json()
+            playlist_id = new_playlist['id']
+
+            # Add tracks to the new playlist if provided
+            tracks = request.data.get("tracks", [])
+            if tracks:
+                add_tracks_response = self.add_items_to_playlist(request, playlist_id)
+                if add_tracks_response.status_code != 201:
+                    logger.warning(f"Failed to add tracks to new playlist: {add_tracks_response.data}")
+                    # Note: We're not returning here, as the playlist was still created successfully
+
+            logger.info("Successfully created playlist and added tracks")
+            return Response(new_playlist, status=status.HTTP_201_CREATED)
+
         except Exception as e:
-            logger.exception("An error occurred while creating the playlist")
+            logger.exception("An error occurred while creating the playlist and adding tracks")
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-    def add_items_to_playlist(self, request, playlist_id, *args, **kwargs):
+    def add_items_to_playlist(self, request, playlist_id):
         logger.info(f"Adding items to playlist: {playlist_id}")
         logger.debug(f"Request data: {request.data}")
 
         try:
-            uris = request.data.get("uris", [])
+            uris = request.data.get("tracks", [])
             position = request.data.get("position")
 
             data = {"uris": uris}

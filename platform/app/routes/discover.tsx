@@ -27,6 +27,7 @@ import { Playlist } from "../types/playlists/types";
 import { User } from "../types/user";
 import { getSession, commitSession } from "../session.server";
 import { usePlaylists } from "../hooks/usePlaylists";
+import { Tooltip } from '../components/Tooltip';
 
 export const loader: LoaderFunction = async ({ request }) => {
   const session = await getSession(request);
@@ -152,7 +153,8 @@ export default function Discover() {
   const playlistTrackDetails = selectedPlaylistTracks?.items.map(item => ({
     uri: item.track.uri,
     name: item.track.name,
-    artists: item.track.artists.map((artist: { name: string }) => artist.name).join(', ')
+    artists: item.track.artists.map((artist: { name: string }) => artist.name).join(', '),
+    href: item.track.href,
   })) || [];
 
   useEffect(() => {
@@ -241,6 +243,11 @@ export default function Discover() {
   const handleReset = useCallback(() => {
     resetSearch(setSelections, setCategory, setInputValue, setSuggestions, setAdvancedParams);
   }, [setSelections, setCategory, setInputValue, setSuggestions, setAdvancedParams]);
+
+  const [showTooltip, setShowTooltip] = useState(false);
+  const playlistButtonRef = useRef<HTMLDivElement>(null);
+
+  console.log('Discover render', { isInitialLoad, selectedTab });
 
   return (
     <div className="flex flex-col h-screen bg-gray-100 md:flex-row">
@@ -352,16 +359,33 @@ export default function Discover() {
               >
                 Recommendations
               </button>
-              <button 
-                onClick={() => setSelectedTab('playlist')}
-                className={`px-6 py-2 w-1/6 rounded-full truncate font-semibold transition-all duration-300 ease-in-out ${
-                  selectedTab === 'playlist'
-                    ? 'bg-button-primary text-white'
-                    : 'border-2 border-button-primary text-button-primary hover:bg-button-primary hover:text-white'
-                }`}
+              <div 
+                ref={playlistButtonRef}
+                onMouseEnter={() => !selectedPlaylist && setShowTooltip(true)}
+                onMouseLeave={() => setShowTooltip(false)}
+                className="relative w-1/6"
               >
-                {isLoadingSelectedPlaylist ? 'Loading...' : selectedPlaylist ? selectedPlaylist.name : 'Selected Playlist'}
-              </button>
+                <button 
+                  onClick={() => setSelectedTab('playlist')}
+                  disabled={!selectedPlaylist}
+                  className={`px-6 py-2 w-full rounded-full truncate font-semibold transition-all duration-300 ease-in-out ${
+                    selectedTab === 'playlist'
+                      ? 'bg-button-primary text-white'
+                      : selectedPlaylist
+                        ? 'border-2 border-button-primary text-button-primary hover:bg-button-primary hover:text-white'
+                        : 'border-2 border-gray-400 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  {isLoadingSelectedPlaylist ? 'Loading...' : selectedPlaylist ? selectedPlaylist.name : 'Select Playlist'}
+                </button>
+              </div>
+              {showTooltip && !selectedPlaylist && (
+                <Tooltip 
+                  text="Select a playlist from the sidebar to view here"
+                  targetRect={playlistButtonRef.current?.getBoundingClientRect() || null}
+                  position="top"
+                />
+              )}
             </div>
             <MusicGrid 
               recommendations={recommendations}
