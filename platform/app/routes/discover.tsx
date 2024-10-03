@@ -390,6 +390,7 @@ export default function Discover() {
             <MusicGrid 
               recommendations={recommendations}
               playlistTracks={playlistTrackDetails}
+              selectedPlaylist={selectedPlaylist}
               onLoadMore={loadMoreResults} 
               isLoading={isLoadingSelectedPlaylist} 
               isInitialLoad={isInitialLoad} 

@@ -11,6 +11,7 @@ interface MusicGridProps {
   isInitialLoad: boolean;
   selectedTab: 'recommendations' | 'playlist';
   isMobile: boolean;
+  selectedPlaylist: string | null;
 }
 
 // eslint-disable-next-line react/prop-types
@@ -28,7 +29,8 @@ export function MusicGrid({
   isLoading, 
   isInitialLoad, 
   selectedTab,
-  isMobile
+  isMobile,
+  selectedPlaylist
 }: MusicGridProps) {
   console.log('MusicGrid rendered', { 
     recommendations, 
@@ -43,7 +45,10 @@ export function MusicGrid({
   const [visibleResults, setVisibleResults] = useState<string[]>([]);
   const [batchSize] = useState(9);
   const { toasts, addToast, removeToast, clearToasts } = useToast();
-  
+  const gridRef = useRef<HTMLDivElement>(null);
+  const lastItemRef = useRef<HTMLDivElement>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
   const results = useMemo(() => 
     selectedTab === 'recommendations' ? recommendations : playlistTracks.map(track => track.uri),
     [selectedTab, recommendations, playlistTracks]
@@ -54,18 +59,12 @@ export function MusicGrid({
     [playlistTracks]
   );
 
-  const loadMoreVisibleResults = useCallback(() => {
-    if (results.length > visibleResults.length) {
-      const nextBatch = results.slice(visibleResults.length, visibleResults.length + batchSize);
-      setVisibleResults(prev => [...prev, ...nextBatch]);
-    }
-  }, [results, visibleResults, batchSize]);
-
   const loadMoreResults = useCallback(() => {
-    if (!isLoading && results.length === visibleResults.length) {
+    if (!isLoading && results.length === visibleResults.length && !isLoadingMore) {
+      setIsLoadingMore(true);
       onLoadMore();
     }
-  }, [isLoading, results.length, visibleResults.length, onLoadMore]);
+  }, [isLoading, results.length, visibleResults.length, onLoadMore, isLoadingMore]);
 
   const lastResultRef = useCallback((node: HTMLDivElement | null) => {
     if (isLoading) return;
@@ -93,11 +92,20 @@ export function MusicGrid({
   }, [resultsKey, batchSize, selectedTab, clearToasts, results]);
 
   useEffect(() => {
-    // Load more visible results if we have more results than visible
     if (results.length > visibleResults.length && !isLoading) {
-      loadMoreVisibleResults();
+      const nextBatch = results.slice(visibleResults.length, visibleResults.length + batchSize);
+      setVisibleResults(prev => [...prev, ...nextBatch]);
     }
-  }, [results.length, visibleResults.length, isLoading, loadMoreVisibleResults]);
+  }, [results, visibleResults, isLoading, batchSize]);
+
+  useEffect(() => {
+    if (isLoadingMore && !isLoading) {
+      setIsLoadingMore(false);
+      if (lastItemRef.current) {
+        lastItemRef.current.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+      }
+    }
+  }, [isLoading, isLoadingMore, visibleResults]);
 
   useEffect(() => {
     if (hasLocalTracks && selectedTab === 'playlist') {
@@ -160,31 +168,28 @@ export function MusicGrid({
   }
 
   return visibleResults.length ? (
-    <div className="space-y-8">
+    <div className="space-y-8" ref={gridRef}>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {isLoading ? (
-          <>
-            {Array.from({ length: visibleResults.length || batchSize }).map((_, index) => (
-              <div key={index} className="bg-gray-100 rounded-md flex items-center justify-center h-24">
-                <p className="text-gray-600 font-semibold">Unearthing find...</p>
-              </div>
-            ))}
-          </>
-        ) : hasLocalTracks ? (
+        {hasLocalTracks ? (
           <>
             {playlistTracks.map((track, index) => (
               <LocalTrackPlaceholder key={index} name={track.name} artists={track.artists} />
             ))}
           </>
-        ) : (visibleResults.map((result, index) => (
+        ) : (
+          visibleResults.map((result, index) => (
             <div 
-              key={`${result}-${index}-${resultsKey}`} 
-              ref={index === visibleResults.length - 1 ? lastResultRef : null}
-              className="relative group"
-            >
-              <SpotifyEmbed uri={result} />
+              key={`${result}-${index}`}
+            ref={index === visibleResults.length - 1 ? lastItemRef : null}
+            className="relative group"
+          >
+            <SpotifyEmbed uri={result} selectedPlaylist={selectedPlaylist} playlistTracks={playlistTracks}/>
+            {index === visibleResults.length - 2 && (
+              <div ref={lastResultRef} style={{ height: '1px' }} />
+            )}
             </div>
-        )))}
+          ))
+        )}
       </div>
       {isLoading && (
         <div className="text-center py-4 text-gray-600 font-semibold">

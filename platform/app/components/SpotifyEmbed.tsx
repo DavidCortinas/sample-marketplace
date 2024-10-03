@@ -1,11 +1,40 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
+import { Tooltip } from './Tooltip';
+import { Playlist, PlaylistTracksResponse } from '../types/playlists/types';
 
 interface SpotifyEmbedProps {
   uri: string;
+  selectedPlaylist: Playlist | null;
+  playlistTracks: PlaylistTracksResponse | null;
 }
 
-const TrackActions: React.FC<{ uri: string }> = ({ uri }) => {
+const TrackActions: React.FC<{ 
+  uri: string; 
+  selectedPlaylist: Playlist | null;
+  playlistTracks: PlaylistTracksResponse | null;
+}> = ({ uri, selectedPlaylist, playlistTracks }) => {
   const [isLiked, setIsLiked] = useState(false);
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  
+  const likeButtonRef = useRef<HTMLButtonElement>(null);
+  const existingPlaylistButtonRef = useRef<HTMLButtonElement>(null);
+  const newPlaylistButtonRef = useRef<HTMLButtonElement>(null);
+
+  const isTrackInPlaylist = useMemo(() => {
+    if (!playlistTracks || !Array.isArray(playlistTracks)) return false;
+    
+    // Extract the track ID from the uri
+    const trackId = uri.split(':').pop();
+    
+    return playlistTracks.some(track => {
+      // Compare with both uri and id
+      return track.uri === uri || track.uri.endsWith(`:${trackId}`);
+    });
+  }, [playlistTracks, uri]);
+
+  console.log('Track URI:', uri);
+  console.log('Is track in playlist:', isTrackInPlaylist);
+  console.log('Selected playlist tracks:', playlistTracks);
 
   const handleLikeToggle = () => {
     setIsLiked(!isLiked);
@@ -13,17 +42,32 @@ const TrackActions: React.FC<{ uri: string }> = ({ uri }) => {
   };
 
   const handleAddToExistingPlaylist = () => {
-    console.log(`Add to existing playlist: ${uri}`);
+    if (isTrackInPlaylist) {
+      console.log(`Track is already in the playlist: ${uri}`);
+    } else {
+      console.log(`Add to existing playlist: ${uri}`);
+    }
   };
 
   const handleAddToNewPlaylist = () => {
     console.log(`Add to new playlist: ${uri}`);
   };
 
+  const showTooltip = (tooltipId: string) => {
+    setActiveTooltip(tooltipId);
+  };
+
+  const hideTooltip = () => {
+    setActiveTooltip(null);
+  };
+
   return (
     <div className="absolute bottom-2 right-12 flex space-x-2 transition-opacity duration-300">
       <button
+        ref={likeButtonRef}
         onClick={handleLikeToggle}
+        onMouseEnter={() => showTooltip('like')}
+        onMouseLeave={hideTooltip}
         className={`w-8 h-8 flex items-center justify-center rounded-full ${
           isLiked 
             ? 'bg-pink-500 text-white' 
@@ -32,18 +76,51 @@ const TrackActions: React.FC<{ uri: string }> = ({ uri }) => {
       >
         {isLiked ? '❤️' : '🤍'}
       </button>
+      {activeTooltip === 'like' && likeButtonRef.current && (
+        <Tooltip 
+          text={isLiked ? "Remove from liked tracks" : "Add to liked tracks"} 
+          targetRect={likeButtonRef.current.getBoundingClientRect()} 
+          position="top"
+        />
+      )}
+
       <button
+        ref={existingPlaylistButtonRef}
         onClick={handleAddToExistingPlaylist}
-        className="w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-pink-400 to-orange-400 text-white hover:from-pink-500 hover:to-orange-500 transition-colors shadow-md hover:shadow-lg"
+        onMouseEnter={() => showTooltip('existing')}
+        onMouseLeave={hideTooltip}
+        className={`w-8 h-8 flex items-center justify-center rounded-full ${
+          isTrackInPlaylist
+            ? 'bg-green-500 text-white'
+            : 'bg-gradient-to-r from-pink-400 to-orange-400 text-white'
+        } hover:from-pink-500 hover:to-orange-500 transition-colors shadow-md hover:shadow-lg`}
       >
-        📁
+        {isTrackInPlaylist ? '✓' : '📁'}
       </button>
+      {activeTooltip === 'existing' && existingPlaylistButtonRef.current && (
+        <Tooltip 
+          text={isTrackInPlaylist ? `Remove from ${selectedPlaylist?.name}` : `Add to ${selectedPlaylist?.name}`} 
+          targetRect={existingPlaylistButtonRef.current.getBoundingClientRect()} 
+          position="top"
+        />
+      )}
+
       <button
+        ref={newPlaylistButtonRef}
         onClick={handleAddToNewPlaylist}
+        onMouseEnter={() => showTooltip('new')}
+        onMouseLeave={hideTooltip}
         className="w-8 h-8 flex items-center justify-center rounded-full bg-orange-400 text-white hover:bg-orange-500 transition-colors shadow-md hover:shadow-lg"
       >
         ➕
       </button>
+      {activeTooltip === 'new' && newPlaylistButtonRef.current && (
+        <Tooltip 
+          text="Add to new playlist" 
+          targetRect={newPlaylistButtonRef.current.getBoundingClientRect()} 
+          position="top"
+        />
+      )}
     </div>
   );
 };
@@ -51,7 +128,7 @@ const TrackActions: React.FC<{ uri: string }> = ({ uri }) => {
 // Simple cache to store loaded tracks
 const loadedTracks = new Set<string>();
 
-export function SpotifyEmbed({ uri }: SpotifyEmbedProps) {
+export function SpotifyEmbed({ uri, selectedPlaylist, playlistTracks }: SpotifyEmbedProps) {
   const [trackId, setTrackId] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -119,7 +196,11 @@ export function SpotifyEmbed({ uri }: SpotifyEmbedProps) {
               <p className="text-gray-600 font-semibold">Unearthing find...</p>
             </div>
           ) : (
-            <TrackActions uri={uri} />
+            <TrackActions 
+              uri={uri} 
+              selectedPlaylist={selectedPlaylist}
+              playlistTracks={playlistTracks}
+            />
           )}
           <iframe 
             style={{ borderRadius: '12px', opacity: isLoading ? 0 : 1, transition: 'opacity 0.3s' }}
