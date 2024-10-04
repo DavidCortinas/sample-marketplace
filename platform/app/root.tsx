@@ -26,8 +26,6 @@ import customStyles from "./custom-style.css?url";
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: styles },
   { rel: "stylesheet", href: customStyles },
-  // Keep the existing preload link
-  { rel: "preload", href: "https://open.spotify.com/embed/iframe-api/v1", as: "script" },
 ];
 
 export const loader: LoaderFunction = async ({ request }) => {

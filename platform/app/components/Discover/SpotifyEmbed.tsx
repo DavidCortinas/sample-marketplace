@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { Tooltip } from './Tooltip';
-import { Playlist, PlaylistTracksResponse } from '../types/playlists/types';
+import { Tooltip } from '../Tooltip';
+import { Playlist, PlaylistTracksResponse } from '../../types/playlists/types';
+import { CachedSpotifyEmbed } from './CachedSpotifyEmbed';
+import { useInView } from 'react-intersection-observer';
 
 interface SpotifyEmbedProps {
   uri: string;
@@ -170,7 +172,7 @@ export function SpotifyEmbed({ uri, selectedPlaylist, playlistTracks, removeTrac
         }
       },
       {
-        rootMargin: '100px', // Start loading when within 200px of viewport
+        rootMargin: '100px',
         threshold: 0.1
       }
     );
@@ -213,22 +215,7 @@ export function SpotifyEmbed({ uri, selectedPlaylist, playlistTracks, removeTrac
             playlistTracks={playlistTracks}
             removeTrackFromPlaylist={removeTrackFromPlaylist}
           />
-          <iframe 
-            style={{ 
-              borderRadius: '12px', 
-              opacity: isLoading ? 0 : 1, 
-              transition: 'opacity 0.3s' 
-            }}
-            src={`https://open.spotify.com/embed/track/${trackId}?utm_source=generator`} 
-            width="100%" 
-            height="152" 
-            frameBorder="0" 
-            allowFullScreen
-            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
-            loading="lazy"
-            title="Spotify Embed"
-            onLoad={handleIframeLoad}
-          />
+          <CachedSpotifyEmbed trackId={trackId} isVisible={isVisible} onLoad={handleIframeLoad} />
         </>
       )}
     </div>

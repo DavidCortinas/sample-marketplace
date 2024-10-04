@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate, useLoaderData } from "@remix-run/react";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import DiscoverHeader from "../components/Discover/DiscoverHeader";
 import DiscoverSidebar from "../components/Discover/DiscoverSidebar";
 import { MusicGrid } from "../components/Discover/MusicGrid";
@@ -151,12 +151,38 @@ export default function Discover() {
     removeTrackFromPlaylist,
   } = usePlaylists();
 
-  const playlistTrackDetails = selectedPlaylistTracks?.items.map(item => ({
-    uri: item.track.uri,
-    name: item.track.name,
-    artists: item.track.artists.map((artist: { name: string }) => artist.name).join(', '),
-    href: item.track.href,
-  })) || [];
+  // Memoize the recommendations array
+  const memoizedRecommendations = useMemo(() => recommendations, [recommendations]);
+
+  // Memoize the playlistTrackDetails
+  const memoizedPlaylistTrackDetails = useMemo(() => 
+    selectedPlaylistTracks?.items.map(item => ({
+      uri: item.track.uri,
+      name: item.track.name,
+      artists: item.track.artists.map((artist: { name: string }) => artist.name).join(', '),
+      href: item.track.href,
+    })) || [],
+    [selectedPlaylistTracks]
+  );
+
+  // Memoize the loadMoreResults function
+  const memoizedLoadMoreResults = useCallback(() => {
+    if (!localHasMore || isLoading) return;
+
+    setIsLoading(true);
+    // Simulate loading more results
+    setTimeout(() => {
+      setRecommendations(prev => {
+        const newRecommendations = [...prev, ...Array(5).fill('').map(() => `spotify:track:${Math.random().toString(36).substr(2, 9)}`)];
+        if (newRecommendations.length >= 100) {
+          setLocalHasMore(false);
+        }
+        return newRecommendations.slice(0, 100); // Ensure we never exceed 100 results
+      });
+      setIsLoading(false);
+      setIsInitialLoad(false);
+    }, 1000);
+  }, [localHasMore, isLoading]);
 
   useEffect(() => {
     if (user) {
@@ -222,24 +248,6 @@ export default function Discover() {
     setInputValue('');
     setSuggestions([]);
   };
-
-  const loadMoreResults = useCallback(() => {
-    if (!localHasMore || isLoading) return;
-
-    setIsLoading(true);
-    // Simulate loading more results
-    setTimeout(() => {
-      setRecommendations(prev => {
-        const newRecommendations = [...prev, ...Array(5).fill('').map(() => `spotify:track:${Math.random().toString(36).substr(2, 9)}`)];
-        if (newRecommendations.length >= 100) {
-          setLocalHasMore(false);
-        }
-        return newRecommendations.slice(0, 100); // Ensure we never exceed 100 results
-      });
-      setIsLoading(false);
-      setIsInitialLoad(false);
-    }, 1000);
-  }, [localHasMore, isLoading]);
 
   const handleReset = useCallback(() => {
     resetSearch(setSelections, setCategory, setInputValue, setSuggestions, setAdvancedParams);
@@ -389,14 +397,14 @@ export default function Discover() {
               )}
             </div>
             <MusicGrid 
-              recommendations={recommendations}
-              playlistTracks={playlistTrackDetails}
-              selectedPlaylist={selectedPlaylist}
-              onLoadMore={loadMoreResults} 
-              isLoading={isLoadingSelectedPlaylist} 
+              recommendations={memoizedRecommendations}
+              playlistTracks={memoizedPlaylistTrackDetails}
+              onLoadMore={memoizedLoadMoreResults}
+              isLoading={isLoading || isLoadingSelectedPlaylist} 
               isInitialLoad={isInitialLoad} 
               selectedTab={selectedTab}
               isMobile={isMobile}
+              selectedPlaylist={selectedPlaylist}
               removeTrackFromPlaylist={removeTrackFromPlaylist}
             />
             <Outlet />

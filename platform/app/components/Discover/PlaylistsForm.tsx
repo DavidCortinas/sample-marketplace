@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from '@remix-run/react';
 import { Tooltip } from '../Tooltip';
 import { AlertModal } from '../AlertModal';
-import { SkeletonPlaylist } from '../SkeletonPlaylist';
+import { SkeletonPlaylist } from './SkeletonPlaylist';
 import { Playlist } from '../../types/playlists/types';
 import { usePlaylists } from '../../hooks/usePlaylists';
 

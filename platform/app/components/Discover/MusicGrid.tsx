@@ -1,5 +1,5 @@
-import { SpotifyEmbed } from '../SpotifyEmbed';
-import { useCallback, useRef, useState, useEffect, useMemo } from 'react';
+import React, { memo , useCallback, useRef, useState, useEffect, useMemo } from 'react';
+import { SpotifyEmbed } from './SpotifyEmbed';
 import { useToast } from '../Toast/useToast';
 import { ToastContainer } from '../Toast/ToastContainer';
 
@@ -22,6 +22,11 @@ const LocalTrackPlaceholder: React.FC<{ name: string, artists: string }> = ({ na
     <p className="text-sm text-gray-500">This track is not available on Spotify</p>
   </div>
 );
+
+const MemoizedSpotifyEmbed = memo(SpotifyEmbed, (prevProps, nextProps) => {
+  return prevProps.uri === nextProps.uri &&
+         prevProps.selectedPlaylist?.id === nextProps.selectedPlaylist?.id;
+});
 
 export function MusicGrid({ 
   recommendations, 
@@ -167,25 +172,25 @@ export function MusicGrid({
         {hasLocalTracks ? (
           <>
             {playlistTracks.map((track, index) => (
-              <LocalTrackPlaceholder key={index} name={track.name} artists={track.artists} />
+              <LocalTrackPlaceholder key={`${track.uri}-${index}`} name={track.name} artists={track.artists} />
             ))}
           </>
         ) : (
           visibleResults.map((result, index) => (
             <div 
               key={`${result}-${index}`}
-            ref={index === visibleResults.length - 1 ? lastItemRef : null}
-            className="relative group"
-          >
-            <SpotifyEmbed 
-              uri={result} 
-              selectedPlaylist={selectedPlaylist} 
-              playlistTracks={playlistTracks}
-              removeTrackFromPlaylist={removeTrackFromPlaylist}
-            />
-            {index === visibleResults.length - 2 && (
-              <div ref={lastResultRef} style={{ height: '1px' }} />
-            )}
+              ref={index === visibleResults.length - 1 ? lastItemRef : null}
+              className="relative group"
+            >
+              <MemoizedSpotifyEmbed 
+                uri={result} 
+                selectedPlaylist={selectedPlaylist}
+                playlistTracks={playlistTracks}
+                removeTrackFromPlaylist={removeTrackFromPlaylist}
+              />
+              {index === visibleResults.length - 2 && (
+                <div ref={lastResultRef} style={{ height: '1px' }} />
+              )}
             </div>
           ))
         )}
