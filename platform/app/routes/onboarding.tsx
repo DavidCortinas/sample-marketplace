@@ -5,7 +5,7 @@ import { getSession, commitSession, requireUser } from '../session.server';
 import { ActionFunction, LoaderFunction, json, redirect } from '@remix-run/node';
 import { Combobox } from '@headlessui/react';
 import spotifyLogo from '/images/Spotify_Icon_RGB_White.png';
-import { useTheme } from '../hooks/useTheme';
+// import { useTheme } from '../hooks/useTheme';
 import { getRandomColorClass } from '../utils/forms';
 import { OutletContext } from '../types/outlet';
 
@@ -71,7 +71,7 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const { user } = useOutletContext<OutletContext>();
   const fetcher = useFetcher();
-  const { isDarkMode } = useTheme();
+  // const { isDarkMode } = useTheme();
 
   const [username, setUsername] = useState('');
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

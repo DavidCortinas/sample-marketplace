@@ -6,7 +6,7 @@ import {
   Query,
 } from "../types/recommendations/types";
 import { defaultAdvancedParams } from "../constants/advancedParams";
-import { useFetcher } from "@remix-run/react";
+// import { useFetcher } from "@remix-run/react";
 
 export type CategoryType = "track" | "artist" | "genre";
 

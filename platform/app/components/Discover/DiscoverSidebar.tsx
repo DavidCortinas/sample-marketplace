@@ -163,7 +163,7 @@ export default function DiscoverSidebar({
     
     // Generate colors for queries
     if (savedQueries) {
-      savedQueries.forEach((query) => {
+      savedQueries?.forEach((query) => {
         const key = `query_${query.id}`;
         if (!(key in colorClassRefsRef.current)) {
           colorClassRefsRef.current[key] = getRandomColorClass();
@@ -212,6 +212,10 @@ export default function DiscoverSidebar({
     event.preventDefault();
     clearResults();
     handleSubmit(event);
+  };
+
+  const updatePlaylistTracks = (newTracks: Track[]) => {
+    console.log('newTracks', newTracks)
   };
 
   return (
@@ -559,6 +563,7 @@ export default function DiscoverSidebar({
           colorClassRefs={colorClassRefsRef.current}
           selectPlaylist={selectPlaylist}
           selectedPlaylist={selectedPlaylist}
+          selectedPlaylistTracks={selectedPlaylistTracks}
           totalPlaylists={totalPlaylists}
           limit={limit}
           hasMore={hasMore}
@@ -570,6 +575,7 @@ export default function DiscoverSidebar({
           isDeletingPlaylist={isDeletingPlaylist}
           savedPlaylists={savedPlaylists}
           loadPage={loadPage}
+          updatePlaylistTracks={updatePlaylistTracks}
         />
       )}
       

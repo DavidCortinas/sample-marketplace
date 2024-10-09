@@ -3,14 +3,16 @@ import { useNavigate } from '@remix-run/react';
 import { Tooltip } from '../Tooltip';
 import { AlertModal } from '../AlertModal';
 import { SkeletonPlaylist } from './SkeletonPlaylist';
-import { Playlist } from '../../types/playlists/types';
+import { Playlist, Track } from '../../types/playlists/types';
 import { usePlaylists } from '../../hooks/usePlaylists';
+import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/20/solid';
 
 interface PlaylistsFormProps {
   error: string | null;
   colorClassRefs: { [key: string]: string };
   selectPlaylist: (playlistId: string) => void;
   selectedPlaylist: Playlist | null;
+  selectedPlaylistTracks: Track[];
   totalPlaylists: number;
   limit: number;
   hasMore: boolean;
@@ -24,11 +26,23 @@ interface PlaylistsFormProps {
   loadPage: (pageNumber: number) => void; 
 }
 
+const borderColorClasses = [
+  'border-red-500',
+  'border-blue-500',
+  'border-green-500',
+  'border-yellow-500',
+  'border-purple-500',
+  'border-pink-500',
+  'border-indigo-500',
+  'border-teal-500',
+];
+
 export function PlaylistsForm({
   error,
   colorClassRefs,
   selectPlaylist,
   selectedPlaylist,
+  selectedPlaylistTracks,
   totalPlaylists,
   limit,
   hasMore,
@@ -45,12 +59,23 @@ export function PlaylistsForm({
 	const [hoveredDeleteId, setHoveredDeleteId] = useState<string | null>(null);
 	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 	const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(null);
+  const [borderColors, setBorderColors] = useState<{ [key: string]: string }>({});
 	const navigate = useNavigate();
 	const buttonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
 	const deleteButtonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
 	
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = Math.ceil(totalPlaylists / limit);
+
+  useEffect(() => {
+    const newBorderColors: { [key: string]: string } = {};
+    savedPlaylists.forEach((playlist) => {
+      if (!borderColors[playlist.id]) {
+        newBorderColors[playlist.id] = borderColorClasses[Math.floor(Math.random() * borderColorClasses.length)];
+      }
+    });
+    setBorderColors(prev => ({ ...prev, ...newBorderColors }));
+  }, [savedPlaylists]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -92,48 +117,55 @@ export function PlaylistsForm({
         <SkeletonPlaylist key={`skeleton-${index}`} />
       ));
     }
-    console.log('savedPlaylists', savedPlaylists)
 
-    return savedPlaylists.map((playlist) => (
+return savedPlaylists.map((playlist) => (
+    <div key={playlist.id} className="mb-4">
       <div 
-        key={playlist.id} 
-        className="relative group flex justify-center"
-        onMouseEnter={() => setHoveredPlaylistId(playlist.id)}
-        onMouseLeave={() => setHoveredPlaylistId(null)}
+        className={`flex items-center justify-between bg-bg-secondary p-2 rounded-t-md border-l-4 ${borderColors[playlist.id] || 'border-gray-500'}`}
       >
-        <button 
-          ref={(el) => buttonRefs.current[playlist.id] = el}
-          className={`w-5/6 px-4 py-2 rounded-full text-sm text-white text-center font-medium transition-colors text-left ${colorClassRefs[`playlist_${playlist.id}`] || 'bg-gray-500'}`}
-          onClick={() => handleSelectPlaylist(playlist)}
-        >
-          <span className="truncate block">{playlist.name}</span>
-        </button>
+        <div className="flex items-center min-w-0 flex-1">
+          {playlist.imageUrl && (
+            <img src={playlist.imageUrl} alt={playlist.name} className="w-6 h-6 mr-2 rounded-full flex-shrink-0" />
+          )}
+          <div className="min-w-0 flex-1">
+            <button 
+              className="font-medium truncate text-left w-full flex items-center justify-between"
+              onClick={() => handleSelectPlaylist(playlist)}
+            >
+              <div className="flex flex-col truncate">
+                <span className="truncate">{playlist.name}</span>
+                {playlist.description && (
+                  <div className="text-sm text-text-secondary truncate">{playlist.description}</div>
+                )}
+              </div>
+              {selectedPlaylist?.id === playlist.id ? (
+                <ChevronUpIcon className="h-5 w-5" />
+              ) : (
+                <ChevronDownIcon className="h-5 w-5" />
+              )}
+            </button>
+          </div>
+        </div>
         <button
-          ref={(el) => deleteButtonRefs.current[playlist.id] = el}
-          className="absolute right-1 top-1/4 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-1 transition-all duration-200 ease-in-out scale-75 group-hover:scale-100"
           onClick={(e) => handleDeletePlaylist(playlist, e)}
-          onMouseEnter={() => setHoveredDeleteId(playlist.id)}
-          onMouseLeave={() => setHoveredDeleteId(null)}
+          className="text-red-500 hover:text-red-700 ml-2 flex-shrink-0"
           disabled={isDeletingPlaylist}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 wiggle-animation" fill="none" viewBox="0 0 24 24" stroke="white">
-            <path strokeLinecap="round" stroke='white' strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
+          &times;
         </button>
-        {hoveredPlaylistId === playlist.id && hoveredDeleteId !== playlist.id && (
-          <Tooltip 
-            text="View playlist details"
-            targetRect={buttonRefs.current[playlist.id]?.getBoundingClientRect() || null}
-            position="right"
-          />
-        )}
-        {hoveredDeleteId === playlist.id && (
-          <Tooltip 
-            text={`Delete ${playlist.name} playlist?`}
-            targetRect={deleteButtonRefs.current[playlist.id]?.getBoundingClientRect() || null}
-            position="left"
-          />
-        )}
+      </div>
+      {selectedPlaylist?.id === playlist.id && (
+        <div className="bg-bg-tertiary rounded-b-md border-l-4 border-r-4 border-b-4 border-t-0 border-opacity-50" style={{borderColor: borderColors[playlist.id] || 'rgb(107, 114, 128)'}}>
+          {selectedPlaylistTracks && selectedPlaylistTracks.items.map((item, index) => (
+            <div key={item.track.id} className='flex items-center py-2 border-b last:border-b-0 border-gray-600'>
+              <div className='truncate flex-1'>
+                <span className="font-medium">{item.track.name}</span>
+                <span className="text-sm text-gray-400"> - {item.track.artists[0].name}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       </div>
     ));
   };
