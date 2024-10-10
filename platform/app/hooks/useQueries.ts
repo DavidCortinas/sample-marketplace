@@ -14,7 +14,6 @@ export const useQueries = () => {
 
   const loadQueries = useCallback(() => {
     if (fetcher.state === "idle" && !fetcher.data) {
-      console.log("Loading queries");
       fetcher.load("/api/queries");
     }
   }, [fetcher]);
@@ -37,8 +36,6 @@ export const useQueries = () => {
       queryName: string,
       recommendations: string[] // Add this new parameter
     ) => {
-      console.log(selections);
-      console.log(category);
       const newQuery = {
         name: queryName,
         parameters: {

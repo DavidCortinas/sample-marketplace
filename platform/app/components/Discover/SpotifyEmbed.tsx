@@ -37,13 +37,8 @@ const TrackActions: React.FC<{
     });
   }, [playlistTracks, uri]);
 
-  console.log('Track URI:', uri);
-  console.log('Is track in playlist:', isTrackInPlaylist);
-  console.log('Selected playlist tracks:', playlistTracks);
-
   const handleLikeToggle = () => {
     setIsLiked(!isLiked);
-    console.log(`${isLiked ? 'Unliked' : 'Liked'} track: ${uri}`);
   };
 
   const handleAddToExistingPlaylist = async () => {
@@ -51,7 +46,6 @@ const TrackActions: React.FC<{
       setIsRemoving(true);
       try {
         await removeTrackFromPlaylist(selectedPlaylist.id, uri);
-        console.log(`Removed track from playlist: ${uri}`);
       } catch (error) {
         console.error('Failed to remove track from playlist:', error);
       } finally {

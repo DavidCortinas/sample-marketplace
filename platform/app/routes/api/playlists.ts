@@ -11,16 +11,10 @@ const playlistCache: { [key: string]: CachedData } = {};
 const CACHE_DURATION = 60000; // 1 minute in milliseconds
 
 export const loader: LoaderFunction = async ({ request, params }) => {
-  console.log("API/PLAYLISTS LOADER CALLED", {
-    url: request.url,
-    method: request.method,
-  });
   const url = new URL(request.url);
   const playlistId = url.searchParams.get("playlistId");
   const limit = url.searchParams.get("limit") || "20";
   const offset = url.searchParams.get("offset") || "0";
-
-  console.log("Incoming request for playlists:", { playlistId, limit, offset });
 
   // Create a cache key that includes limit and offset
   const cacheKey = playlistId ? playlistId : `all_${limit}_${offset}`;
@@ -30,7 +24,6 @@ export const loader: LoaderFunction = async ({ request, params }) => {
     playlistCache[cacheKey] &&
     Date.now() - playlistCache[cacheKey].timestamp < CACHE_DURATION
   ) {
-    console.log("Returning cached playlists for", cacheKey);
     return json(playlistCache[cacheKey].data);
   }
 
@@ -38,7 +31,6 @@ export const loader: LoaderFunction = async ({ request, params }) => {
     let response;
     if (playlistId) {
       // Get a single playlist
-      console.log("Fetching single playlist:", playlistId);
       response = await authenticatedFetch(`/spotify/playlists/${playlistId}/`, {
         method: "GET",
         headers: {
@@ -48,7 +40,6 @@ export const loader: LoaderFunction = async ({ request, params }) => {
       });
     } else {
       // Get all playlists
-      console.log("Fetching all playlists");
       let url = `/spotify/playlists/?limit=${limit}&offset=${offset}`;
       response = await authenticatedFetch(url, {
         method: "GET",
@@ -85,7 +76,6 @@ export const action: ActionFunction = async ({ request }) => {
     let playlistData;
     try {
       playlistData = JSON.parse(playlistDataString);
-      console.log("Received playlist data:", playlistData);
     } catch (error) {
       console.error("Error parsing playlistData:", error);
       return json({ error: "Invalid playlist data format" }, { status: 400 });

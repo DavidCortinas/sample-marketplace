@@ -36,29 +36,21 @@ export const usePlaylists = () => {
   const fetcher = useFetcher();
   const shouldLoadPlaylists = useRef(true);
   const [isLoading, setIsLoading] = useState(false);
-  console.log("selectedPlaylist", selectedPlaylist);
-  console.log("selectedPlaylistTracks", selectedPlaylistTracks);
-  console.log("savedPlaylists", savedPlaylists);
 
   const loadPlaylists = useCallback(
     async (forcedOffset?: number) => {
-      console.log("Loading playlists", { limit, offset: forcedOffset });
-      console.log("shouldLoadPlaylists.current", shouldLoadPlaylists.current);
-      console.log("isLoading", isLoading);
       if (shouldLoadPlaylists.current && !isLoading) {
         setIsLoading(true);
         const currentOffset =
           forcedOffset !== undefined ? forcedOffset : offset;
-        console.log("Loading playlists", { limit, offset: currentOffset });
         const url = `/api/playlists?limit=${limit}&offset=${currentOffset}`;
         try {
           const response = await fetch(url);
-          console.log("Fetch response status:", response.status);
+
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
           const data = await response.json();
-          console.log("Fetched data:", data);
 
           if ("items" in data) {
             setSavedPlaylists(data.items);
@@ -78,11 +70,9 @@ export const usePlaylists = () => {
   );
 
   const loadMore = useCallback(() => {
-    console.log("Loading more playlists");
     if (hasMore && !isLoading) {
       setOffset((prevOffset) => {
         const newOffset = prevOffset + limit;
-        console.log("New offset:", newOffset);
         shouldLoadPlaylists.current = true;
         loadPlaylists(newOffset);
         return newOffset;
@@ -91,11 +81,8 @@ export const usePlaylists = () => {
   }, [hasMore, limit, isLoading, loadPlaylists]);
 
   const loadPrevious = useCallback(() => {
-    console.log("Loading previous playlists");
     if (offset > 0 && !isLoading) {
-      console.log("Loading previous playlists", { offset, limit });
       const newOffset = Math.max(0, offset - limit);
-      console.log("New offset:", newOffset);
       shouldLoadPlaylists.current = true;
       setOffset(newOffset);
       loadPlaylists(newOffset);
@@ -115,18 +102,36 @@ export const usePlaylists = () => {
   }, [loadPlaylists, offset]);
 
   const selectPlaylist = useCallback(
-    (playlistId: string) => {
+    async (playlistId: string) => {
       const playlist = savedPlaylists.find((p) => p.id === playlistId);
       if (playlist) {
         setSelectedPlaylist(playlist);
       }
-      console.log(`Fetching playlist details for ID: ${playlistId}`);
-      // Fetch playlist details
-      fetcher.load(`/api/playlists?playlistId=${playlistId}`);
-      // Fetch playlist tracks
-      fetcher.load(`/api/playlists?playlistId=${playlistId}&tracks=true`);
+
+      setIsLoading(true);
+      try {
+        // Fetch playlist details
+        const detailsResponse = await fetch(`/api/playlists?playlistId=${playlistId}`);
+        const detailsData = await detailsResponse.json();
+
+        if (detailsData.id) {
+          setSelectedPlaylist(detailsData);
+        }
+
+        // Fetch playlist tracks
+        const tracksResponse = await fetch(`/api/playlists?playlistId=${playlistId}&tracks=true`);
+        const tracksData = await tracksResponse.json();
+
+        if (tracksData.items && Array.isArray(tracksData.items)) {
+          setSelectedPlaylistTracks(tracksData);
+        }
+      } catch (error) {
+        console.error("Error fetching playlist details and tracks:", error);
+      } finally {
+        setIsLoading(false);
+      }
     },
-    [fetcher, savedPlaylists]
+    [savedPlaylists]
   );
 
   const changeLimit = useCallback((newLimit: number) => {
@@ -150,42 +155,18 @@ export const usePlaylists = () => {
     [fetcher]
   );
 
-  useEffect(() => {
-    console.log("Fetcher data changed:", fetcher.data);
-    if (fetcher.data && !fetcher.data.error) {
-      if (fetcher.data.message === "Playlist successfully unfollowed") {
-        // ... existing code for playlist deletion ...
-      } else if (fetcher.data.items && Array.isArray(fetcher.data.items)) {
-        // This is the tracks data
-        console.log("Received tracks data:", fetcher.data);
-        setSelectedPlaylistTracks(fetcher.data);
-      } else if (fetcher.data.id) {
-        // This is the playlist data (without tracks)
-        console.log("Received playlist data:", fetcher.data);
-        setSelectedPlaylist(fetcher.data);
-      } else {
-        console.log("Unexpected fetcher data structure:", fetcher.data);
-      }
-    }
-  }, [fetcher.data]);
-
-  // Add this effect to log changes to selectedPlaylist and selectedPlaylistTracks
-  useEffect(() => {
-    console.log("selectedPlaylist updated:", selectedPlaylist);
-    console.log("selectedPlaylistTracks updated:", selectedPlaylistTracks);
-  }, [selectedPlaylist, selectedPlaylistTracks]);
-
-  const loadPage = useCallback((page: number) => {
-    console.log(`Loading page ${page}`);
-    const newOffset = (page - 1) * limit;
-    setOffset(newOffset);
-    shouldLoadPlaylists.current = true;
-    loadPlaylists(newOffset);
-  }, [limit, loadPlaylists]);
+  const loadPage = useCallback(
+    (page: number) => {
+      const newOffset = (page - 1) * limit;
+      setOffset(newOffset);
+      shouldLoadPlaylists.current = true;
+      loadPlaylists(newOffset);
+    },
+    [limit, loadPlaylists]
+  );
 
   const removeTrackFromPlaylist = useCallback(
     async (playlistId: string, trackUri: string) => {
-      console.log(`Removing track ${trackUri} from playlist ${playlistId}`);
       try {
         const formData = new FormData();
         formData.append("action", "remove_items");
@@ -207,7 +188,6 @@ export const usePlaylists = () => {
         }
 
         const result = await response.json();
-        console.log("Track removed successfully:", result);
 
         // Update the local state to reflect the change
         if (selectedPlaylist && selectedPlaylist.id === playlistId) {
@@ -231,6 +211,31 @@ export const usePlaylists = () => {
       }
     },
     [selectedPlaylist]
+  );
+
+  const updatePlaylistTracks = useCallback(
+    (playlistId: string, newTracks: any[]) => {
+      setSelectedPlaylistTracks((prevTracks) => {
+        if (prevTracks && prevTracks.items) {
+          return {
+            ...prevTracks,
+            items: newTracks.map((track) => ({ track })),
+          };
+        }
+        return prevTracks;
+      });
+
+      // Optionally, you might want to update the server here
+      // This depends on your API structure, but could look something like:
+      // fetcher.submit(
+      //   {
+      //     action: "reorder",
+      //     playlistData: JSON.stringify({ id: playlistId, tracks: newTracks }),
+      //   },
+      //   { method: "post", action: "/api/playlists" }
+      // );
+    },
+    []
   );
 
   return {
@@ -262,5 +267,6 @@ export const usePlaylists = () => {
     totalPages: Math.ceil(totalPlaylists / limit),
     loadPage,
     removeTrackFromPlaylist,
+    updatePlaylistTracks,
   };
 };

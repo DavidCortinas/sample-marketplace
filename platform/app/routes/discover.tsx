@@ -149,6 +149,7 @@ export default function Discover() {
     totalPages,
     loadPage,
     removeTrackFromPlaylist,
+    updatePlaylistTracks,
   } = usePlaylists();
 
   // Memoize the recommendations array
@@ -187,7 +188,6 @@ export default function Discover() {
   useEffect(() => {
     if (user) {
       if (initialLoadRef.current) {
-        console.log('loading queries and playlists');
         loadQueries();
         loadPlaylists();
         initialLoadRef.current = false;
@@ -232,11 +232,11 @@ export default function Discover() {
   }, [location.state?.recommendations]);
 
   useEffect(() => {
-  if (selectedPlaylist && selectedPlaylistTracks) {
-    setIsInitialLoad(false);
-    setSelectedTab('playlist');
-  }
-}, [selectedPlaylist, selectedPlaylistTracks]);
+    if (selectedPlaylist && selectedPlaylistTracks) {
+      setIsInitialLoad(false);
+      setSelectedTab('playlist');
+    }
+  }, [selectedPlaylist, selectedPlaylistTracks]);
 
   const clearResults = useCallback(() => {
     setRecommendations([]);
@@ -255,8 +255,6 @@ export default function Discover() {
 
   const [showTooltip, setShowTooltip] = useState(false);
   const playlistButtonRef = useRef<HTMLDivElement>(null);
-
-  console.log('Discover render', { isInitialLoad, selectedTab });
 
   return (
     <div className="flex flex-col h-screen bg-gray-100 md:flex-row">
@@ -316,6 +314,7 @@ export default function Discover() {
           queriesError={queriesError}
           saveNewQuery={saveNewQuery}
           loadPage={loadPage}
+          updatePlaylistTracks={updatePlaylistTracks}
         />
       </div>
 

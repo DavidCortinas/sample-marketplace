@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import * as Accordion from '@radix-ui/react-accordion';
 import * as Switch from '@radix-ui/react-switch';
 import * as Slider from '@radix-ui/react-slider';
@@ -16,6 +16,7 @@ import { PlaylistsForm } from './PlaylistsForm';
 import { Playlist, Track } from '../../types/playlists/types';
 import { Form } from '@remix-run/react';
 import { getRandomColorClass } from '../../utils/forms';
+import { PlaylistSidebar } from './PlaylistSidebar';
 
 
 const categoryMapping: Record<CategoryLabel, CategoryType> = {
@@ -83,6 +84,7 @@ export default function DiscoverSidebar({
   savedQueries,
   queriesError,
   loadPage,
+  updatePlaylistTracks,
 } : { 
   user: User | null, 
   accessToken: string | null,
@@ -136,6 +138,7 @@ export default function DiscoverSidebar({
   savedQueries: Query[],
   queriesError: string,
   loadPage: (page: number) => void,
+  updatePlaylistTracks: (newTracks: Track[]) => void,
 }) {
   const prevInputValueRef = useRef('');
   const prevCategoryRef = useRef<CategoryLabel>('Songs');
@@ -214,9 +217,13 @@ export default function DiscoverSidebar({
     handleSubmit(event);
   };
 
-  const updatePlaylistTracks = (newTracks: Track[]) => {
-    console.log('newTracks', newTracks)
-  };
+  const handleReorder = useCallback((result: any) => {
+    if (!result.destination) return;
+    const items = Array.from(selectedPlaylistTracks);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    updatePlaylistTracks(items);
+  }, [selectedPlaylistTracks, updatePlaylistTracks]);
 
   return (
     <div className="bg-bg-primary text-text-primary w-full h-full md:w-64 md:h-screen flex-shrink-0 border-r border-border overflow-y-auto flex flex-col z-40 relative">
@@ -558,25 +565,34 @@ export default function DiscoverSidebar({
       )}
       
       {sidebarMode === 'playlists' && (
-        <PlaylistsForm 
-          error={error}
-          colorClassRefs={colorClassRefsRef.current}
-          selectPlaylist={selectPlaylist}
-          selectedPlaylist={selectedPlaylist}
-          selectedPlaylistTracks={selectedPlaylistTracks}
-          totalPlaylists={totalPlaylists}
-          limit={limit}
-          hasMore={hasMore}
-          loadMore={loadMore}
-          loadPrevious={loadPrevious}
-          changeLimit={changeLimit}
-          deletePlaylist={deletePlaylist}
-          isLoadingPlaylists={isLoadingPlaylists}
-          isDeletingPlaylist={isDeletingPlaylist}
-          savedPlaylists={savedPlaylists}
-          loadPage={loadPage}
-          updatePlaylistTracks={updatePlaylistTracks}
-        />
+        <>
+          {selectedPlaylist ? (
+            <PlaylistSidebar
+              tracks={selectedPlaylistTracks}
+              onReorder={handleReorder}
+            />
+          ) : (
+            <PlaylistsForm 
+              error={error}
+              colorClassRefs={colorClassRefsRef.current}
+              selectPlaylist={selectPlaylist}
+              selectedPlaylist={selectedPlaylist}
+              selectedPlaylistTracks={selectedPlaylistTracks}
+              totalPlaylists={totalPlaylists}
+              limit={limit}
+              hasMore={hasMore}
+              loadMore={loadMore}
+              loadPrevious={loadPrevious}
+              changeLimit={changeLimit}
+              deletePlaylist={deletePlaylist}
+              isLoadingPlaylists={isLoadingPlaylists}
+              isDeletingPlaylist={isDeletingPlaylist}
+              savedPlaylists={savedPlaylists}
+              loadPage={loadPage}
+              updatePlaylistTracks={updatePlaylistTracks}
+            />
+          )}
+        </>
       )}
       
     {sidebarMode === 'queries' && (

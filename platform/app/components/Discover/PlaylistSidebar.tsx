@@ -24,6 +24,10 @@ const PlaylistSidebar = memo(({ tracks, onReorder }: PlaylistSidebarProps) => {
     onReorder(result);
   }, [onReorder]);
 
+  if (!tracks || tracks.length === 0) {
+    return <div>Loading playlist tracks...</div>;
+  }
+
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
       <Droppable droppableId="playlist">
@@ -33,12 +37,12 @@ const PlaylistSidebar = memo(({ tracks, onReorder }: PlaylistSidebarProps) => {
             ref={provided.innerRef}
             className="space-y-2"
           >
-            {tracks.map((track, index) => {
-              const draggableId = `track-${track.id}-${index}`;
+            {tracks.items.map((item, index) => {
+              const draggableId = `track-${item.track.id}-${index}`;
               return (
                 <TrackItem
                   key={draggableId}
-                  track={track}
+                  track={item.track}
                   index={index}
                   draggableId={draggableId}
                   renderDraggable={renderDraggable}
@@ -54,6 +58,7 @@ const PlaylistSidebar = memo(({ tracks, onReorder }: PlaylistSidebarProps) => {
 });
 
 PlaylistSidebar.displayName = 'PlaylistSidebar';
+
 const TrackItem = memo(({ track, index, draggableId, renderDraggable }: TrackItemProps) => {
   return (
     <Draggable draggableId={draggableId} index={index}>
@@ -67,7 +72,7 @@ const TrackItem = memo(({ track, index, draggableId, renderDraggable }: TrackIte
           }`}
         >
           <img
-            src={track.album.images[0]?.url || '/default-album.jpg'}
+            src={track.album?.images[0]?.url || '/default-album.jpg'}
             alt={`${track.name} album cover`}
             className="w-10 h-10 rounded-md mr-3 object-cover flex-shrink-0"
           />

@@ -59,11 +59,12 @@ export function MusicGrid({
   );
 
   const loadMoreResults = useCallback(() => {
-    if (!isLoading && results.length === visibleResults.length && !isLoadingMore) {
+    if (!isLoading && results.length > visibleResults.length && !isLoadingMore) {
       setIsLoadingMore(true);
-      onLoadMore();
+      const nextBatch = results.slice(visibleResults.length, visibleResults.length + batchSize);
+      setVisibleResults(prev => [...prev, ...nextBatch]);
     }
-  }, [isLoading, results.length, visibleResults.length, onLoadMore, isLoadingMore]);
+  }, [isLoading, results, visibleResults, batchSize, isLoadingMore]);
 
   const lastResultRef = useCallback((node: HTMLDivElement | null) => {
     if (isLoading) return;
@@ -91,11 +92,10 @@ export function MusicGrid({
   }, [resultsKey, batchSize, selectedTab, clearToasts, results]);
 
   useEffect(() => {
-    if (results.length > visibleResults.length && !isLoading) {
-      const nextBatch = results.slice(visibleResults.length, visibleResults.length + batchSize);
-      setVisibleResults(prev => [...prev, ...nextBatch]);
+    if (results.length > visibleResults.length && !isLoading && !isLoadingMore) {
+      loadMoreResults();
     }
-  }, [results, visibleResults, isLoading, batchSize]);
+  }, [results, visibleResults, isLoading, isLoadingMore, loadMoreResults]);
 
   useEffect(() => {
     if (isLoadingMore && !isLoading) {
@@ -104,7 +104,7 @@ export function MusicGrid({
         lastItemRef.current.scrollIntoView({ behavior: 'auto', block: 'nearest' });
       }
     }
-  }, [isLoading, isLoadingMore, visibleResults]);
+  }, [isLoading, isLoadingMore]);
 
   useEffect(() => {
     if (hasLocalTracks && selectedTab === 'playlist') {
@@ -126,9 +126,6 @@ export function MusicGrid({
       }
     }
   }, [hasLocalTracks, selectedTab, addToast, removeToast, toasts]);
-
-  console.log('Visible results:', visibleResults);
-  console.log('Selected tab:', selectedTab);
 
   if (isInitialLoad || results.length === 0) {
     if (selectedTab === 'recommendations') {
