@@ -56,7 +56,8 @@ export function PlaylistsForm({
   loadPage // Add this prop to handle loading a specific page
 }: PlaylistsFormProps) {
 	const [hoveredPlaylistId, setHoveredPlaylistId] = useState<string | null>(null);
-	const [hoveredDeleteId, setHoveredDeleteId] = useState<string | null>(null);
+  const [hoveredSelectId, setHoveredSelectId] = useState<string | null>(null);
+  const [hoveredDeleteId, setHoveredDeleteId] = useState<string | null>(null);
 	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 	const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(null);
   const [borderColors, setBorderColors] = useState<{ [key: string]: string }>({});
@@ -66,6 +67,8 @@ export function PlaylistsForm({
 	
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = Math.ceil(totalPlaylists / limit);
+  const [selectTooltipRect, setSelectTooltipRect] = useState<{ [key: string]: DOMRect | null }>({});
+  const [deleteTooltipRect, setDeleteTooltipRect] = useState<{ [key: string]: DOMRect | null }>({});
 
   useEffect(() => {
     const newBorderColors: { [key: string]: string } = {};
@@ -111,6 +114,38 @@ export function PlaylistsForm({
 		}
 	};
 
+  useEffect(() => {
+    if (hoveredPlaylistId) {
+      const selectButton = buttonRefs.current[hoveredPlaylistId];
+      const deleteButton = deleteButtonRefs.current[hoveredPlaylistId];
+
+      if (selectButton) {
+        setSelectTooltipRect(prev => ({ ...prev, [hoveredPlaylistId]: selectButton.getBoundingClientRect() }));
+      }
+      if (deleteButton) {
+        setDeleteTooltipRect(prev => ({ ...prev, [hoveredPlaylistId]: deleteButton.getBoundingClientRect() }));
+      }
+    }
+  }, [hoveredPlaylistId]);
+
+  useEffect(() => {
+    if (hoveredSelectId) {
+      const selectButton = buttonRefs.current[hoveredSelectId];
+      if (selectButton) {
+        setSelectTooltipRect(prev => ({ ...prev, [hoveredSelectId]: selectButton.getBoundingClientRect() }));
+      }
+    }
+  }, [hoveredSelectId]);
+
+  useEffect(() => {
+    if (hoveredDeleteId) {
+      const deleteButton = deleteButtonRefs.current[hoveredDeleteId];
+      if (deleteButton) {
+        setDeleteTooltipRect(prev => ({ ...prev, [hoveredDeleteId]: deleteButton.getBoundingClientRect() }));
+      }
+    }
+  }, [hoveredDeleteId]);
+
   const renderPlaylists = () => {
     if (isLoadingPlaylists) {
       return Array.from({ length: limit }).map((_, index) => (
@@ -118,10 +153,18 @@ export function PlaylistsForm({
       ));
     }
 
-return savedPlaylists.map((playlist) => (
-    <div key={playlist.id} className="mb-4">
+    return savedPlaylists.map((playlist) => (
       <div 
-        className={`flex items-center justify-between bg-bg-secondary p-2 rounded-t-md border-l-4 ${borderColors[playlist.id] || 'border-gray-500'}`}
+        key={playlist.id}
+        className={`flex items-center justify-between bg-bg-secondary p-2 rounded-t-md border-l-4 ${borderColors[playlist.id] || 'border-gray-500'} relative group`}
+        onMouseEnter={() => setHoveredPlaylistId(playlist.id)}
+        onMouseLeave={() => {
+          setHoveredPlaylistId(null);
+          setHoveredSelectId(null);
+          setHoveredDeleteId(null);
+          setSelectTooltipRect(prev => ({ ...prev, [playlist.id]: null }));
+          setDeleteTooltipRect(prev => ({ ...prev, [playlist.id]: null }));
+        }}
       >
         <div className="flex items-center min-w-0 flex-1">
           {playlist.imageUrl && (
@@ -129,8 +172,11 @@ return savedPlaylists.map((playlist) => (
           )}
           <div className="min-w-0 flex-1">
             <button 
+              ref={el => buttonRefs.current[playlist.id] = el}
               className="font-medium truncate text-left w-full flex items-center justify-between"
               onClick={() => handleSelectPlaylist(playlist)}
+              onMouseEnter={() => setHoveredSelectId(playlist.id)}
+              onMouseLeave={() => setHoveredSelectId(null)}
             >
               <div className="flex flex-col truncate">
                 <span className="truncate">{playlist.name}</span>
@@ -138,34 +184,37 @@ return savedPlaylists.map((playlist) => (
                   <div className="text-sm text-text-secondary truncate">{playlist.description}</div>
                 )}
               </div>
-              {selectedPlaylist?.id === playlist.id ? (
-                <ChevronUpIcon className="h-5 w-5" />
-              ) : (
-                <ChevronDownIcon className="h-5 w-5" />
-              )}
             </button>
+            {hoveredSelectId === playlist.id && selectTooltipRect[playlist.id] && (
+              <Tooltip
+                text={`Select ${playlist.name}`}
+                targetRect={selectTooltipRect[playlist.id]}
+                position="bottom"
+              />
+            )}
           </div>
         </div>
-        <button
-          onClick={(e) => handleDeletePlaylist(playlist, e)}
-          className="text-red-500 hover:text-red-700 ml-2 flex-shrink-0"
-          disabled={isDeletingPlaylist}
-        >
-          &times;
-        </button>
-      </div>
-      {selectedPlaylist?.id === playlist.id && (
-        <div className="bg-bg-tertiary rounded-b-md border-l-4 border-r-4 border-b-4 border-t-0 border-opacity-50" style={{borderColor: borderColors[playlist.id] || 'rgb(107, 114, 128)'}}>
-          {selectedPlaylistTracks && selectedPlaylistTracks.items.map((item, index) => (
-            <div key={item.track.id} className='flex items-center py-2 border-b last:border-b-0 border-gray-600'>
-              <div className='truncate flex-1'>
-                <span className="font-medium">{item.track.name}</span>
-                <span className="text-sm text-gray-400"> - {item.track.artists[0].name}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+        {hoveredPlaylistId === playlist.id && (
+          <button
+            ref={el => deleteButtonRefs.current[playlist.id] = el}
+            onClick={(e) => handleDeletePlaylist(playlist, e)}
+            className="absolute bottom-1 right-1 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity"
+            disabled={isDeletingPlaylist}
+            onMouseEnter={() => setHoveredDeleteId(playlist.id)}
+            onMouseLeave={() => setHoveredDeleteId(null)}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        )}
+        {hoveredDeleteId === playlist.id && deleteTooltipRect[playlist.id] && (
+          <Tooltip
+            text={`Delete ${playlist.name}`}
+            targetRect={deleteTooltipRect[playlist.id]}
+            position="right"
+          />
+        )}
       </div>
     ));
   };
