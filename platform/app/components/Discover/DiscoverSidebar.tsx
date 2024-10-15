@@ -69,6 +69,7 @@ export default function DiscoverSidebar({
   savedPlaylists,
   selectedPlaylist,
   selectPlaylist,
+  clearSelectedPlaylist,
   selectedPlaylistTracks,
   totalPlaylists,
   limit,
@@ -121,6 +122,7 @@ export default function DiscoverSidebar({
   savedPlaylists: Playlist[],
   selectedPlaylist: Playlist | null,
   selectPlaylist: (playlist: Playlist) => void,
+  clearSelectedPlaylist: () => void,
   selectedPlaylistTracks: Track[],
   totalPlaylists: number,
   limit: number,
@@ -570,6 +572,7 @@ export default function DiscoverSidebar({
             <PlaylistSidebar
               tracks={selectedPlaylistTracks}
               onReorder={handleReorder}
+              onBackToPlaylists={clearSelectedPlaylist}
             />
           ) : (
             <PlaylistsForm 

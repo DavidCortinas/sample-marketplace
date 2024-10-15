@@ -14,9 +14,10 @@ interface Track {
 interface PlaylistSidebarProps {
   tracks: Track[];
   onReorder: (result: any) => void;
+  onBackToPlaylists: () => void;  // New prop for handling the back button click
 }
 
-const PlaylistSidebar = memo(({ tracks, onReorder }: PlaylistSidebarProps) => {
+const PlaylistSidebar = memo(({ tracks, onReorder, onBackToPlaylists }: PlaylistSidebarProps) => {
   const renderDraggable = useDraggableInPortal();
 
   const handleDragEnd = useCallback((result: any) => {
@@ -25,39 +26,61 @@ const PlaylistSidebar = memo(({ tracks, onReorder }: PlaylistSidebarProps) => {
   }, [onReorder]);
 
   if (!tracks || tracks.length === 0) {
-    return <div>Loading playlist tracks...</div>;
+    return (
+      <div className="p-4">
+        <BackToPlaylistsButton onBackToPlaylists={onBackToPlaylists} />
+        <div className="mt-4">Loading playlist tracks...</div>
+      </div>
+    );
   }
 
   return (
-    <DragDropContext onDragEnd={handleDragEnd}>
-      <Droppable droppableId="playlist">
-        {(provided) => (
-          <ul
-            {...provided.droppableProps}
-            ref={provided.innerRef}
-            className="space-y-2"
-          >
-            {tracks.items.map((item, index) => {
-              const draggableId = `track-${item.track.id}-${index}`;
-              return (
-                <TrackItem
-                  key={draggableId}
-                  track={item.track}
-                  index={index}
-                  draggableId={draggableId}
-                  renderDraggable={renderDraggable}
-                />
-              );
-            })}
-            {provided.placeholder}
-          </ul>
-        )}
-      </Droppable>
-    </DragDropContext>
+    <div className="h-full flex flex-col">
+      <div className="p-4">
+        <BackToPlaylistsButton onBackToPlaylists={onBackToPlaylists} />
+      </div>
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <Droppable droppableId="playlist">
+          {(provided) => (
+            <ul
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+              className="space-y-2 flex-grow overflow-y-auto"
+            >
+              {tracks.items.map((item, index) => {
+                const draggableId = `track-${item.track.id}-${index}`;
+                return (
+                  <TrackItem
+                    key={draggableId}
+                    track={item.track}
+                    index={index}
+                    draggableId={draggableId}
+                    renderDraggable={renderDraggable}
+                  />
+                );
+              })}
+              {provided.placeholder}
+            </ul>
+          )}
+        </Droppable>
+      </DragDropContext>
+    </div>
   );
 });
 
 PlaylistSidebar.displayName = 'PlaylistSidebar';
+
+const BackToPlaylistsButton = ({ onBackToPlaylists }: { onBackToPlaylists: () => void }) => (
+  <button
+    onClick={onBackToPlaylists}
+    className="flex items-center text-sm font-medium text-blue-500 hover:text-blue-600 transition-colors"
+  >
+    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+    </svg>
+    Back to Playlists
+  </button>
+);
 
 const TrackItem = memo(({ track, index, draggableId, renderDraggable }: TrackItemProps) => {
   return (

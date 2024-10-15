@@ -36,6 +36,8 @@ export const usePlaylists = () => {
   const fetcher = useFetcher();
   const shouldLoadPlaylists = useRef(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [gridSelectedPlaylist, setGridSelectedPlaylist] = useState<Playlist | null>(null);
+  const [gridSelectedPlaylistTracks, setGridSelectedPlaylistTracks] = useState<PlaylistTracksResponse | null>(null);
 
   const loadPlaylists = useCallback(
     async (forcedOffset?: number) => {
@@ -137,7 +139,6 @@ export const usePlaylists = () => {
   const changeLimit = useCallback((newLimit: number) => {
     setLimit(newLimit);
     setOffset(0);
-    // Don't clear savedPlaylists here
     setHasMore(true);
     shouldLoadPlaylists.current = true;
   }, []);
@@ -189,7 +190,6 @@ export const usePlaylists = () => {
 
         const result = await response.json();
 
-        // Update the local state to reflect the change
         if (selectedPlaylist && selectedPlaylist.id === playlistId) {
           setSelectedPlaylistTracks((prevTracks) => {
             if (prevTracks) {
@@ -224,19 +224,33 @@ export const usePlaylists = () => {
         }
         return prevTracks;
       });
-
-      // Optionally, you might want to update the server here
-      // This depends on your API structure, but could look something like:
-      // fetcher.submit(
-      //   {
-      //     action: "reorder",
-      //     playlistData: JSON.stringify({ id: playlistId, tracks: newTracks }),
-      //   },
-      //   { method: "post", action: "/api/playlists" }
-      // );
     },
     []
   );
+
+  const clearSelectedPlaylist = useCallback(() => {
+    setSelectedPlaylist(null);
+    setSelectedPlaylistTracks(null);
+  }, []);
+
+  const selectGridPlaylist = useCallback(async (playlistId: string) => {
+    const playlist = savedPlaylists.find((p) => p.id === playlistId);
+    if (playlist) {
+      setGridSelectedPlaylist(playlist);
+      try {
+        const response = await fetch(
+          `/api/playlists?playlistId=${playlistId}&tracks=true`
+        );
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setGridSelectedPlaylistTracks(data);
+      } catch (error) {
+        console.error('Error fetching grid playlist tracks:', error);
+      }
+    }
+  }, [savedPlaylists]);
 
   return {
     savedPlaylists,
@@ -268,5 +282,9 @@ export const usePlaylists = () => {
     loadPage,
     removeTrackFromPlaylist,
     updatePlaylistTracks,
+    clearSelectedPlaylist,
+    selectGridPlaylist,
+    gridSelectedPlaylist,
+    gridSelectedPlaylistTracks,
   };
 };

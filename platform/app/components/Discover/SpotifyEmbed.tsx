@@ -3,6 +3,7 @@ import { Tooltip } from '../Tooltip';
 import { Playlist, PlaylistTracksResponse } from '../../types/playlists/types';
 import { CachedSpotifyEmbed } from './CachedSpotifyEmbed';
 import { useInView } from 'react-intersection-observer';
+import { useLocalStorage } from '../../hooks/useLocalStorage'; 
 
 interface SpotifyEmbedProps {
   uri: string;
@@ -135,8 +136,25 @@ const TrackActions: React.FC<{
   );
 };
 
-// Simple cache to store loaded tracks
-const loadedTracks = new Set<string>();
+const useTrackCache = () => {
+  const [loadedTracks, setLoadedTracks] = useLocalStorage<string[]>('loadedTracks', []);
+
+  const addTrack = (trackId: string) => {
+    setLoadedTracks(prev => {
+      const prevArray = Array.isArray(prev) ? prev : [];
+      if (!prevArray.includes(trackId)) {
+        return [...prevArray, trackId];
+      }
+      return prevArray;
+    });
+  };
+
+  const hasTrack = (trackId: string) => {
+    return Array.isArray(loadedTracks) && loadedTracks.includes(trackId);
+  };
+
+  return { addTrack, hasTrack };
+};
 
 export function SpotifyEmbed({ uri, selectedPlaylist, playlistTracks, removeTrackFromPlaylist }: SpotifyEmbedProps) {
   const [trackId, setTrackId] = useState<string | null>(null);
@@ -144,6 +162,7 @@ export function SpotifyEmbed({ uri, selectedPlaylist, playlistTracks, removeTrac
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const { addTrack, hasTrack } = useTrackCache();
 
   useEffect(() => {
     const parts = uri.split(':');
@@ -161,7 +180,7 @@ export function SpotifyEmbed({ uri, selectedPlaylist, playlistTracks, removeTrac
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsVisible(true);
-          loadedTracks.add(trackId);
+          addTrack(trackId);
           observer.unobserve(entry.target);
         }
       },
@@ -180,23 +199,19 @@ export function SpotifyEmbed({ uri, selectedPlaylist, playlistTracks, removeTrac
         observer.unobserve(ref.current);
       }
     };
-  }, [trackId]);
+  }, [trackId, addTrack]);
 
   const handleIframeLoad = () => {
     setIsLoading(false);
   };
 
-  if (error) {
-    return null;
-  }
-
-  if (!trackId) {
+  if (error || !trackId) {
     return null;
   }
 
   return (
     <div ref={ref} className="h-[152px] w-full relative">
-      {(isVisible || loadedTracks.has(trackId)) && (
+      {(isVisible || hasTrack(trackId)) && (
         <>
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-md">

@@ -8,7 +8,6 @@ interface MusicGridProps {
   playlistTracks: { uri: string, name: string, artists: string }[];
   onLoadMore: () => void;
   isLoading: boolean;
-  isInitialLoad: boolean;
   selectedTab: 'recommendations' | 'playlist';
   isMobile: boolean;
   selectedPlaylist: string | null;
@@ -33,20 +32,20 @@ export function MusicGrid({
   playlistTracks, 
   onLoadMore, 
   isLoading, 
-  isInitialLoad, 
   selectedTab,
   isMobile,
   selectedPlaylist,
   removeTrackFromPlaylist
 }: MusicGridProps) {
-
-  const observer = useRef<IntersectionObserver | null>(null);
   const [visibleResults, setVisibleResults] = useState<string[]>([]);
   const [batchSize] = useState(9);
   const { toasts, addToast, removeToast, clearToasts } = useToast();
+  const observer = useRef<IntersectionObserver | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const lastItemRef = useRef<HTMLDivElement>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  console.log('playlistTracks', playlistTracks);
+  console.log('visibleResults', visibleResults);
 
   const results = useMemo(() => 
     selectedTab === 'recommendations' ? recommendations : playlistTracks.map(track => track.uri),
@@ -57,6 +56,21 @@ export function MusicGrid({
     playlistTracks.some(track => track.uri.startsWith('spotify:local')),
     [playlistTracks]
   );
+
+  // Reset visible results when component mounts or key dependencies change
+  useEffect(() => {
+    setVisibleResults([]);
+    if (selectedTab === 'recommendations') {
+      clearToasts();
+    }
+  }, [selectedTab, clearToasts]);
+
+  // Load initial batch of results
+  useEffect(() => {
+    if (results.length > 0 && !isLoading) {
+      setVisibleResults(results.slice(0, batchSize));
+    }
+  }, [results, isLoading, batchSize]);
 
   const loadMoreResults = useCallback(() => {
     if (!isLoading && results.length > visibleResults.length && !isLoadingMore) {
@@ -77,20 +91,6 @@ export function MusicGrid({
     if (node) observer.current.observe(node);
   }, [isLoading, loadMoreResults]);
 
-  const resultsKey = useMemo(() => 
-    `${selectedTab}-${results.length}-${playlistTracks.length}`,
-    [selectedTab, results, playlistTracks]
-  );
-
-  useEffect(() => {
-    // Reset visible results when results change
-    setVisibleResults(results.slice(0, batchSize));
-    
-    if (selectedTab === 'recommendations') {
-      clearToasts();
-    }
-  }, [resultsKey, batchSize, selectedTab, clearToasts, results]);
-
   useEffect(() => {
     if (results.length > visibleResults.length && !isLoading && !isLoadingMore) {
       loadMoreResults();
@@ -100,9 +100,9 @@ export function MusicGrid({
   useEffect(() => {
     if (isLoadingMore && !isLoading) {
       setIsLoadingMore(false);
-      if (lastItemRef.current) {
-        lastItemRef.current.scrollIntoView({ behavior: 'auto', block: 'nearest' });
-      }
+      // if (lastItemRef.current) {
+      //   lastItemRef.current.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+      // }
     }
   }, [isLoading, isLoadingMore]);
 
@@ -126,8 +126,9 @@ export function MusicGrid({
       }
     }
   }, [hasLocalTracks, selectedTab, addToast, removeToast, toasts]);
+  console.log('results', results);
 
-  if (isInitialLoad || results.length === 0) {
+  if (results.length === 0) {
     if (selectedTab === 'recommendations') {
       return (
         <div className="flex justify-center items-start my-12 md:items-center h-full">
@@ -163,7 +164,7 @@ export function MusicGrid({
     }
   }
 
-  return visibleResults.length ? (
+  return visibleResults.length > 0 ? (
     <div className="space-y-8" ref={gridRef}>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {hasLocalTracks ? (

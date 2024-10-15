@@ -121,9 +121,6 @@ export const handleSubmit = async (
   e: React.FormEvent,
   selections: FormattedResult[],
   advancedParams: AdvancedParams,
-  setCategory: (category: CategoryLabel) => void,
-  setInputValue: (value: string) => void,
-  setSuggestions: (suggestions: FormattedResult[]) => void,
   navigate: (
     path: string,
     options?: { state?: { recommendations: string[] }; replace?: boolean }

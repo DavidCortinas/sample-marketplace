@@ -85,9 +85,8 @@ export default function Discover() {
   
   const [selectedTab, setSelectedTab] = useState<'recommendations' | 'playlist'>('recommendations');
   const [recommendations, setRecommendations] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMemoizedResults, setIsLoadingMemoizedResults] = useState(false);
   const [localHasMore, setLocalHasMore] = useState(true);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isLoadingQueries, setIsLoadingQueries] = useState(false);
@@ -139,6 +138,9 @@ export default function Discover() {
     loadMore,
     loadPrevious,
     selectPlaylist,
+    gridSelectedPlaylist,
+    gridSelectedPlaylistTracks,
+    selectGridPlaylist,
     changeLimit,
     isLoadingPlaylists,
     isLoadingSelectedPlaylist,
@@ -150,6 +152,7 @@ export default function Discover() {
     loadPage,
     removeTrackFromPlaylist,
     updatePlaylistTracks,
+    clearSelectedPlaylist,
   } = usePlaylists();
 
   // Memoize the recommendations array
@@ -168,9 +171,9 @@ export default function Discover() {
 
   // Memoize the loadMoreResults function
   const memoizedLoadMoreResults = useCallback(() => {
-    if (!localHasMore || isLoading) return;
+    if (!localHasMore || isLoadingMemoizedResults) return;
 
-    setIsLoading(true);
+    setIsLoadingMemoizedResults(true);
     // Simulate loading more results
     setTimeout(() => {
       setRecommendations(prev => {
@@ -180,10 +183,9 @@ export default function Discover() {
         }
         return newRecommendations.slice(0, 100); // Ensure we never exceed 100 results
       });
-      setIsLoading(false);
-      setIsInitialLoad(false);
+      setIsLoadingMemoizedResults(false);
     }, 1000);
-  }, [localHasMore, isLoading]);
+  }, [localHasMore, isLoadingMemoizedResults]);
 
   useEffect(() => {
     if (user) {
@@ -207,7 +209,6 @@ export default function Discover() {
       setCategory(selectedQuery.parameters.category);
       setAdvancedParams(selectedQuery.parameters.advancedParams);
       setRecommendations(selectedQuery.recommendations);
-      setIsInitialLoad(false);
       
       setSidebarMode('search');
     }
@@ -227,20 +228,17 @@ export default function Discover() {
   useEffect(() => {
     if (location.state?.recommendations) {
       setRecommendations(location.state.recommendations);
-      setIsInitialLoad(false);
     }
   }, [location.state?.recommendations]);
 
   useEffect(() => {
     if (selectedPlaylist && selectedPlaylistTracks) {
-      setIsInitialLoad(false);
       setSelectedTab('playlist');
     }
   }, [selectedPlaylist, selectedPlaylistTracks]);
 
   const clearResults = useCallback(() => {
     setRecommendations([]);
-    setIsInitialLoad(true);
     setLocalHasMore(true);
   }, []);
 
@@ -252,6 +250,16 @@ export default function Discover() {
   const handleReset = useCallback(() => {
     resetSearch(setSelections, setCategory, setInputValue, setSuggestions, setAdvancedParams);
   }, [setSelections, setCategory, setInputValue, setSuggestions, setAdvancedParams]);
+
+  const onHandleSubmit = async (e: React.FormEvent) => {
+    await handleSubmit(e, selections, advancedParams, navigate);
+    setSelectedTab('recommendations');
+  };
+
+  const handleGridPlaylistSelect = useCallback((playlistId: string) => {
+    selectGridPlaylist(playlistId);
+    setSelectedTab('playlist');
+  }, [selectGridPlaylist, setSelectedTab]);
 
   const [showTooltip, setShowTooltip] = useState(false);
   const playlistButtonRef = useRef<HTMLDivElement>(null);
@@ -275,7 +283,7 @@ export default function Discover() {
           handleSelection={(item) => handleSelection(item, selections, setSelections, setInputValue, setSuggestions)}
           clearInput={clearInput}
           clearResults={clearResults}
-          handleSubmit={(e) => handleSubmit(e, selections, advancedParams, setCategory, setInputValue, setSuggestions, navigate)}
+          handleSubmit={onHandleSubmit}
           handleParamToggle={(param) => handleParamToggle(param as keyof AdvancedParams, setAdvancedParams)}
           handleParamChange={(param, newValues) => handleParamChange(param as keyof AdvancedParams, newValues, advancedParams, setAdvancedParams)}
           getSliderValue={(param, values) => getSliderValue(param as keyof AdvancedParams, values)}
@@ -296,6 +304,7 @@ export default function Discover() {
           recommendations={recommendations}
           savedPlaylists={savedPlaylists}
           selectPlaylist={selectPlaylist}
+          clearSelectedPlaylist={clearSelectedPlaylist}
           selectedPlaylist={selectedPlaylist}
           selectedPlaylistTracks={selectedPlaylistTracks}
           totalPlaylists={totalPlaylists}
@@ -338,7 +347,7 @@ export default function Discover() {
                 handleInputChange={(e) => handleInputChange(e, setInputValue, setSuggestions)}
                 handleSelection={(item) => handleSelection(item, selections, setSelections, setInputValue, setSuggestions)}
                 clearInput={clearInput}
-                handleSubmit={(e) => handleSubmit(e, selections, advancedParams, setCategory, setInputValue, setSuggestions, navigate)}
+                handleSubmit={(e) => handleSubmit(e, selections, advancedParams, navigate)}
                 handleParamToggle={(param) => handleParamToggle(param as keyof AdvancedParams, setAdvancedParams)}
                 handleParamChange={(param, newValues) => handleParamChange(param as keyof AdvancedParams, newValues, advancedParams, setAdvancedParams)}
                 getSliderValue={(param, values) => getSliderValue(param as keyof AdvancedParams, values)}
@@ -373,9 +382,9 @@ export default function Discover() {
                 onMouseLeave={() => setShowTooltip(false)}
                 className="relative w-1/6"
               >
-                <button 
-                  onClick={() => setSelectedTab('playlist')}
-                  disabled={!selectedPlaylist}
+                <select
+                  value={gridSelectedPlaylist?.id || ''}
+                  onChange={(e) => handleGridPlaylistSelect(e.target.value)}
                   className={`px-6 py-2 w-full rounded-full truncate font-semibold transition-all duration-300 ease-in-out ${
                     selectedTab === 'playlist'
                       ? 'bg-button-primary text-white'
@@ -384,26 +393,28 @@ export default function Discover() {
                         : 'border-2 border-gray-400 text-gray-400 cursor-not-allowed'
                   }`}
                 >
-                  {isLoadingSelectedPlaylist ? 'Loading...' : selectedPlaylist ? selectedPlaylist.name : 'Select Playlist'}
-                </button>
+                  <option value="">Select Playlist</option>
+                  {savedPlaylists.map((playlist) => (
+                    <option key={playlist.id} value={playlist.id}>
+                      {playlist.name}
+                    </option>
+                  ))}
+                </select>
               </div>
-              {showTooltip && !selectedPlaylist && (
-                <Tooltip 
-                  text="Select a playlist from the sidebar to view here"
-                  targetRect={playlistButtonRef.current?.getBoundingClientRect() || null}
-                  position="top"
-                />
-              )}
             </div>
             <MusicGrid 
               recommendations={memoizedRecommendations}
-              playlistTracks={memoizedPlaylistTrackDetails}
+              playlistTracks={gridSelectedPlaylistTracks?.items.map(item => ({
+                uri: item.track.uri,
+                name: item.track.name,
+                artists: item.track.artists.map((artist: { name: string }) => artist.name).join(', '),
+                href: item.track.href,
+              })) || []}
               onLoadMore={memoizedLoadMoreResults}
-              isLoading={isLoading || isLoadingSelectedPlaylist} 
-              isInitialLoad={isInitialLoad} 
+              isLoading={isLoadingMemoizedResults || isLoadingSelectedPlaylist} 
               selectedTab={selectedTab}
               isMobile={isMobile}
-              selectedPlaylist={selectedPlaylist}
+              selectedPlaylist={gridSelectedPlaylist}
               removeTrackFromPlaylist={removeTrackFromPlaylist}
             />
             <Outlet />
