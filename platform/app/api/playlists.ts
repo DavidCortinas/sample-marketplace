@@ -1,11 +1,11 @@
-import { API_BASE_URL } from '../config';
-import { Artist, Playlist, Track } from '../types/playlists/types';
+import { API_BASE_URL } from "../config";
+import { Artist, Playlist, Track } from "../types/playlists/types";
 
 export async function fetchPlaylists(accessToken: string | null) {
-  console.log('Fetching playlists with access token:', accessToken);
-  const data = await fetch(`${API_BASE_URL}/api/spotify/playlists/`, {
+  console.log("Fetching playlists with access token:", accessToken);
+  const data = await fetch(`${API_BASE_URL}/api/playlists/`, {
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
+      Authorization: `Bearer ${accessToken}`,
     },
   });
 

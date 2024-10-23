@@ -10,7 +10,7 @@ urlpatterns = [
         views.check_email_verification,
         name="check_email_verification",
     ),
-    path("api/playlists/", views.get_playlists, name="get_playlists"),
+    path("playlists/", views.get_playlists, name="get_playlists"),
     path("genres/", get_genres, name="get_genres"),
     path("complete-onboarding/", complete_onboarding, name="complete_onboarding"),
 ]

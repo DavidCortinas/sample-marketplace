@@ -40,7 +40,9 @@ export const loader: LoaderFunction = async ({ request, params }) => {
       });
     } else {
       // Get all playlists
-      let url = `/spotify/playlists/?limit=${limit}&offset=${offset}`;
+      console.log("Fetching all playlists");
+      // let url = `/spotify/playlists/?limit=${limit}&offset=${offset}`;
+      let url = `/playlists`;
       response = await authenticatedFetch(url, {
         method: "GET",
         headers: {
