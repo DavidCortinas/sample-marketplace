@@ -391,21 +391,25 @@ class SpotifyPlaylistsView(APIView):
 
             # Get the new playlist ID
             new_playlist = create_response.json()
-            playlist_id = new_playlist['id']
+            playlist_id = new_playlist["id"]
 
             # Add tracks to the new playlist if provided
             tracks = request.data.get("tracks", [])
             if tracks:
                 add_tracks_response = self.add_items_to_playlist(request, playlist_id)
                 if add_tracks_response.status_code != 201:
-                    logger.warning(f"Failed to add tracks to new playlist: {add_tracks_response.data}")
+                    logger.warning(
+                        f"Failed to add tracks to new playlist: {add_tracks_response.data}"
+                    )
                     # Note: We're not returning here, as the playlist was still created successfully
 
             logger.info("Successfully created playlist and added tracks")
             return Response(new_playlist, status=status.HTTP_201_CREATED)
 
         except Exception as e:
-            logger.exception("An error occurred while creating the playlist and adding tracks")
+            logger.exception(
+                "An error occurred while creating the playlist and adding tracks"
+            )
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
@@ -596,7 +600,7 @@ class SpotifyRecommendationsView(View):
             seed_artists = request.GET.get("seed_artists", "")
             seed_genres = request.GET.get("seed_genres", "")
             seed_tracks = request.GET.get("seed_tracks", "")
-            limit = request.GET.get("limit", "100")
+            limit = request.GET.get("limit", "20")
 
             # Process advanced parameters
             advanced_params = request.GET.get("advanced_params", "{}")

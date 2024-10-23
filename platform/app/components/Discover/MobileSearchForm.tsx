@@ -8,6 +8,10 @@ import { CategoryLabel, AdvancedParams, FormattedResult } from '../../types/reco
 import type { User } from '../../types/user';
 import type { Query } from '../../types/recommendations/types';
 import { Queries } from '../Queries';
+import { Form } from '@remix-run/react';
+import { PlaylistsForm } from './PlaylistsForm';
+import { PlaylistSidebar } from './PlaylistSidebar';
+import { Playlist, Track } from '../../types/playlists/types';
 
 const categoryMapping: Record<CategoryLabel, CategoryType> = {
   'Songs': 'track',
@@ -16,38 +20,60 @@ const categoryMapping: Record<CategoryLabel, CategoryType> = {
 };
 
 export function MobileSearchForm({
-  user, 
-  getSpotifyAccessToken, 
-  sidebarMode, 
+  user,
+  accessToken,
+  getSpotifyAccessToken,
+  sidebarMode,
   setSidebarMode,
-  category, 
+  category,
   inputValue,
   suggestions,
   setSuggestions,
   handleCategoryChange,
   handleInputChange,
-  handleSelection, 
+  handleSelection,
   clearInput,
+  clearResults,
   handleSubmit,
   handleParamToggle,
   handleParamChange,
   getSliderValue,
   formatParamValue,
   handleRemoveSelection,
-  handleSaveQuery,
   handleSelectQuery,
   handleSwitchToSearch,
   selections,
   advancedParams,
-  savedQueries,
   hoveredParam,
   setHoveredParam,
   handleReset,
   isLoadingQueries,
-} : { 
-  user: User | null, 
-  getSpotifyAccessToken: () => Promise<string | null>, 
-  sidebarMode: 'search' | 'playlists' | 'queries', 
+  recommendations,
+  savedPlaylists,
+  selectedPlaylist,
+  selectPlaylist,
+  clearSelectedPlaylist,
+  selectedPlaylistTracks,
+  totalPlaylists,
+  limit,
+  offset,
+  loadMore,
+  loadPrevious,
+  changeLimit,
+  deletePlaylist,
+  isDeletingPlaylist,
+  isLoadingPlaylists,
+  error,
+  savedQueries,
+  queriesError,
+  saveNewQuery,
+  loadPage,
+  updatePlaylistTracks,
+}: {
+  user: User | null,
+  accessToken: string | null,
+  getSpotifyAccessToken: () => Promise<string | null>,
+  sidebarMode: 'search' | 'playlists' | 'queries',
   setSidebarMode: (mode: 'search' | 'playlists' | 'queries') => void,
   category: CategoryLabel,
   inputValue: string,
@@ -57,26 +83,48 @@ export function MobileSearchForm({
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
   handleSelection: (item: FormattedResult) => void,
   clearInput: () => void,
+  clearResults: () => void,
   handleSubmit: (e: React.FormEvent) => void,
   handleParamToggle: (param: string) => void,
   handleParamChange: (param: string, newValues: number[]) => void,
   getSliderValue: (param: string, values: AdvancedParams[keyof AdvancedParams]) => number[],
   formatParamValue: (param: string, value: number) => string,
   handleRemoveSelection: (item: FormattedResult) => void,
-  handleSaveQuery: () => void,
   handleSelectQuery: (query: Query) => void,
   handleSwitchToSearch: () => void,
   selections: FormattedResult[],
   advancedParams: AdvancedParams,
-  savedQueries: Query[],
   hoveredParam: string | null,
   setHoveredParam: (param: string | null) => void,
   handleReset: () => void,
   isLoadingQueries: boolean,
+  recommendations: string[],
+  savedPlaylists: Playlist[],
+  selectedPlaylist: Playlist | null,
+  selectPlaylist: (playlist: Playlist) => void,
+  clearSelectedPlaylist: () => void,
+  selectedPlaylistTracks: Track[],
+  totalPlaylists: number,
+  limit: number,
+  offset: number,
+  loadMore: () => void,
+  loadPrevious: () => void,
+  changeLimit: (newLimit: number) => void,
+  deletePlaylist: (playlistId: string) => void,
+  isDeletingPlaylist: boolean,
+  isLoadingPlaylists: boolean,
+  error: string,
+  savedQueries: Query[],
+  queriesError: string,
+  saveNewQuery: (queryName: string, selections: FormattedResult[], category: CategoryLabel, advancedParams: AdvancedParams, recommendations: string[]) => void,
+  loadPage: (page: number) => void,
+  updatePlaylistTracks: (newTracks: Track[]) => void,
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const prevInputValueRef = useRef('');
   const prevCategoryRef = useRef<CategoryLabel>('Songs');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const colorClassRefsRef = useRef<{ [key: string]: string }>({});
 
   useEffect(() => {
     if (inputValue !== prevInputValueRef.current || category !== prevCategoryRef.current) {
@@ -101,6 +149,24 @@ export function MobileSearchForm({
     e.preventDefault();
     setIsExpanded(false);
     handleSubmit(e);
+  };
+
+  const onSubmitQuery = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const queryName = formData.get('queryName') as string;
+    if (queryName) {
+      saveNewQuery(queryName, selections, category, advancedParams, recommendations);
+      setIsModalOpen(false);
+    }
+  };
+
+  const handleReorder = (result: any) => {
+    if (!result.destination) return;
+    const items = Array.from(selectedPlaylistTracks);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    updatePlaylistTracks(items);
   };
 
   return (
@@ -372,7 +438,7 @@ export function MobileSearchForm({
               </Accordion.Root>
               <div className="relative mb-2">
                 <button
-                  onClick={handleSaveQuery}
+                  onClick={() => setIsModalOpen(true)}
                   className={`mt-4 w-full px-4 py-2 rounded transition-colors ${
                     user
                       ? 'bg-blue-500 text-button-text hover:bg-blue-600'
@@ -409,20 +475,83 @@ export function MobileSearchForm({
           )}
           
           {sidebarMode === 'playlists' && (
-            <div className="flex-1 overflow-y-auto">
-              <h2 className="text-lg text-center font-semibold">Playlists</h2>
-              <p className="text-center text-text-secondary mt-4">Playlist functionality coming soon!</p>
-            </div>
+            <>
+              {selectedPlaylist ? (
+                <PlaylistSidebar
+                  tracks={selectedPlaylistTracks}
+                  onReorder={handleReorder}
+                  onBackToPlaylists={clearSelectedPlaylist}
+                />
+              ) : (
+                <PlaylistsForm 
+                  error={error}
+                  colorClassRefs={colorClassRefsRef.current}
+                  selectPlaylist={selectPlaylist}
+                  selectedPlaylist={selectedPlaylist}
+                  selectedPlaylistTracks={selectedPlaylistTracks}
+                  totalPlaylists={totalPlaylists}
+                  limit={limit}
+                  offset={offset}
+                  loadMore={loadMore}
+                  loadPrevious={loadPrevious}
+                  changeLimit={changeLimit}
+                  deletePlaylist={deletePlaylist}
+                  isLoadingPlaylists={isLoadingPlaylists}
+                  isDeletingPlaylist={isDeletingPlaylist}
+                  savedPlaylists={savedPlaylists}
+                  loadPage={loadPage}
+                  updatePlaylistTracks={updatePlaylistTracks}
+                />
+              )}
+            </>
           )}
           
           {sidebarMode === 'queries' && (
             <Queries 
-              // queries={savedQueries} 
               onSelectQuery={handleSelectQuery} 
               onSwitchToSearch={handleSwitchToSearch}
-              isLoading={isLoadingQueries}
+              isLoadingQueries={isLoadingQueries}
+              queriesError={queriesError}
+              savedQueries={savedQueries}
+              colorClassRefs={colorClassRefsRef.current}
             />
           )}
+        </div>
+      )}
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gradient-to-br from-white to-orange-50 rounded-2xl shadow-xl w-96 max-w-full overflow-hidden">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold mb-6 text-[#ff7043]">Save Query</h2>
+              <Form onSubmit={onSubmitQuery}>
+                <div className="mb-6">
+                  <input
+                    type="text"
+                    name="queryName"
+                    placeholder="Enter query name"
+                    className="w-full px-4 py-3 bg-white text-gray-600 border-2 border-[#ff7043] rounded-xl focus:outline-none focus:border-[#ff7043] transition-all duration-300 ease-in-out"
+                    required
+                  />
+                </div>
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-6 py-2 rounded-xl transition-all duration-300 ease-in-out bg-gray-400 text-white hover:bg-gray-500 focus:outline-none"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2 rounded-xl transition-all duration-300 ease-in-out bg-[#ff7043] text-white hover:bg-[#ff5722] focus:outline-none"
+                  >
+                    Save
+                  </button>
+                </div>
+              </Form>
+            </div>
+          </div>
         </div>
       )}
     </div>

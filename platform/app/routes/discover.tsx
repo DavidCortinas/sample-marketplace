@@ -347,22 +347,48 @@ export default function Discover() {
                 handleInputChange={(e) => handleInputChange(e, setInputValue, setSuggestions)}
                 handleSelection={(item) => handleSelection(item, selections, setSelections, setInputValue, setSuggestions)}
                 clearInput={clearInput}
-                handleSubmit={(e) => handleSubmit(e, selections, advancedParams, navigate)}
+                clearResults={clearResults}
+                handleSubmit={onHandleSubmit}
                 handleParamToggle={(param) => handleParamToggle(param as keyof AdvancedParams, setAdvancedParams)}
                 handleParamChange={(param, newValues) => handleParamChange(param as keyof AdvancedParams, newValues, advancedParams, setAdvancedParams)}
                 getSliderValue={(param, values) => getSliderValue(param as keyof AdvancedParams, values)}
                 formatParamValue={(param, value) => formatParamValue(param as keyof AdvancedParams, value)}
                 handleRemoveSelection={(item) => handleRemoveSelection(item, selections, setSelections)}
                 // handleSaveQuery={handleSaveQueryWrapper}
-                handleSelectQuery={(query) => handleSelectQuery(query, setSelections, setCategory, setAdvancedParams, setSidebarMode)}
+                handleSelectQuery={selectQuery}
                 handleSwitchToSearch={() => handleSwitchToSearch(setSidebarMode)}
                 selections={selections}
                 advancedParams={advancedParams}
                 // savedQueries={savedQueries}
+                isLoadingQueries={isLoadingQueries}
                 hoveredParam={hoveredParam}
                 setHoveredParam={setHoveredParam} 
                 handleReset={handleReset}
-                isLoadingQueries={isLoadingQueries}
+                // playlists={playlists}
+                accessToken={accessToken}
+                recommendations={recommendations}
+                savedPlaylists={savedPlaylists}
+                selectPlaylist={selectPlaylist}
+                clearSelectedPlaylist={clearSelectedPlaylist}
+                selectedPlaylist={selectedPlaylist}
+                selectedPlaylistTracks={selectedPlaylistTracks}
+                totalPlaylists={totalPlaylists}
+                limit={limit}
+                offset={offset}
+                loadMore={loadMore}
+                loadPrevious={loadPrevious}
+                changeLimit={changeLimit}
+                deletePlaylist={deletePlaylist}
+                isDeletingPlaylist={isDeletingPlaylist}
+                isLoadingPlaylists={isLoadingPlaylists}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                error={playlistsError}
+                savedQueries={savedQueries}
+                queriesError={queriesError}
+                saveNewQuery={saveNewQuery}
+                loadPage={loadPage}
+                updatePlaylistTracks={updatePlaylistTracks}
               />
             </div>
             <div className="mb-4 flex justify-center space-x-2">
