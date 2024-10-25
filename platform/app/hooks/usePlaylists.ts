@@ -234,6 +234,7 @@ export const usePlaylists = () => {
   const clearSelectedPlaylist = useCallback(() => {
     setSelectedPlaylist(null);
     setSelectedPlaylistTracks(null);
+    setIsEditingNewPlaylist(false);
   }, []);
 
   const selectGridPlaylist = useCallback(async (playlistId: string) => {
