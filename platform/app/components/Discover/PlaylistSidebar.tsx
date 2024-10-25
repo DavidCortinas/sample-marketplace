@@ -1,6 +1,8 @@
-import React, { useCallback, useEffect, memo } from 'react';
+import { useCallback, memo } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { useDraggableInPortal } from '../../hooks/useDraggableInPortal';
+import { Playlist } from '../../types/playlists/types';
+import { CreatePlaylistForm } from './CreatePlaylistForm';
 
 interface Track {
   id: string;
@@ -14,10 +16,24 @@ interface Track {
 interface PlaylistSidebarProps {
   tracks: Track[];
   onReorder: (result: any) => void;
-  onBackToPlaylists: () => void;  // New prop for handling the back button click
+  onBackToPlaylists: () => void; 
+  saveNewPlaylist: (playlist: Playlist) => void | Promise<void>;
+  isEditingNewPlaylist: boolean;
+  newPlaylistName: string;
+  updateNewPlaylistName: (name: string) => void;
+  isLoadingPlaylists: boolean;
 }
 
-const PlaylistSidebar = memo(({ tracks, onReorder, onBackToPlaylists }: PlaylistSidebarProps) => {
+const PlaylistSidebar = memo(({ 
+  tracks, 
+  onReorder, 
+  onBackToPlaylists, 
+  saveNewPlaylist,
+  isEditingNewPlaylist,
+  newPlaylistName,
+  updateNewPlaylistName,
+  isLoadingPlaylists,
+}: PlaylistSidebarProps) => {
   const renderDraggable = useDraggableInPortal();
 
   const handleDragEnd = useCallback((result: any) => {
@@ -25,13 +41,32 @@ const PlaylistSidebar = memo(({ tracks, onReorder, onBackToPlaylists }: Playlist
     onReorder(result);
   }, [onReorder]);
 
-  if (!tracks || tracks.length === 0) {
+  const saveNewPlaylistWrapper = useCallback(
+    async (playlist: Playlist) => {
+      const result = saveNewPlaylist(playlist);
+      if (result instanceof Promise) {
+        await result;
+      }
+    },
+    [saveNewPlaylist]
+  );
+
+  if (!isEditingNewPlaylist && (!tracks || tracks.length === 0)) {
     return (
       <div className="p-4">
         <BackToPlaylistsButton onBackToPlaylists={onBackToPlaylists} />
         <div className="mt-4">Loading playlist tracks...</div>
       </div>
     );
+  } else if (isEditingNewPlaylist) {
+    return (
+      <CreatePlaylistForm
+        newPlaylistName={newPlaylistName}
+        updateNewPlaylistName={updateNewPlaylistName}
+        saveNewPlaylist={saveNewPlaylistWrapper}
+        isLoading={isLoadingPlaylists}
+      />
+    )
   }
 
   return (
@@ -47,7 +82,7 @@ const PlaylistSidebar = memo(({ tracks, onReorder, onBackToPlaylists }: Playlist
               ref={provided.innerRef}
               className="space-y-2 flex-grow overflow-y-auto"
             >
-              {tracks.items.map((item, index) => {
+              {tracks?.items.map((item, index) => {
                 const draggableId = `track-${item.track.id}-${index}`;
                 return (
                   <TrackItem

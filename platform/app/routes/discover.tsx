@@ -18,7 +18,6 @@ import {
   getSliderValue, 
   formatParamValue, 
   handleRemoveSelection, 
-  handleSelectQuery, 
   handleSwitchToSearch, 
   resetSearch 
 } from "../utils/discoverSearchForm";
@@ -27,7 +26,7 @@ import { Playlist } from "../types/playlists/types";
 import { User } from "../types/user";
 import { getSession, commitSession } from "../session.server";
 import { usePlaylists } from "../hooks/usePlaylists";
-import { Tooltip } from '../components/Tooltip';
+import { createEmptyPlaylist } from "../utils/playlist";
 
 export const loader: LoaderFunction = async ({ request }) => {
   const session = await getSession(request);
@@ -148,40 +147,30 @@ export default function Discover() {
     deletePlaylist,
     isDeletingPlaylist,
     currentPage,
-    totalPages,
     loadPage,
     removeTrackFromPlaylist,
     updatePlaylistTracks,
     clearSelectedPlaylist,
+    initiateNewPlaylist,
+    saveNewPlaylist,
+    isEditingNewPlaylist,
+    newPlaylistName,
+    updateNewPlaylistName
   } = usePlaylists();
 
-  // Memoize the recommendations array
   const memoizedRecommendations = useMemo(() => recommendations, [recommendations]);
 
-  // Memoize the playlistTrackDetails
-  const memoizedPlaylistTrackDetails = useMemo(() => 
-    selectedPlaylistTracks?.items.map(item => ({
-      uri: item.track.uri,
-      name: item.track.name,
-      artists: item.track.artists.map((artist: { name: string }) => artist.name).join(', '),
-      href: item.track.href,
-    })) || [],
-    [selectedPlaylistTracks]
-  );
-
-  // Memoize the loadMoreResults function
   const memoizedLoadMoreResults = useCallback(() => {
     if (!localHasMore || isLoadingMemoizedResults) return;
 
     setIsLoadingMemoizedResults(true);
-    // Simulate loading more results
     setTimeout(() => {
       setRecommendations(prev => {
         const newRecommendations = [...prev, ...Array(5).fill('').map(() => `spotify:track:${Math.random().toString(36).substr(2, 9)}`)];
         if (newRecommendations.length >= 100) {
           setLocalHasMore(false);
         }
-        return newRecommendations.slice(0, 100); // Ensure we never exceed 100 results
+        return newRecommendations.slice(0, 100);
       });
       setIsLoadingMemoizedResults(false);
     }, 1000);
@@ -264,6 +253,11 @@ export default function Discover() {
   const [showTooltip, setShowTooltip] = useState(false);
   const playlistButtonRef = useRef<HTMLDivElement>(null);
 
+  const handleInitiateNewPlaylist = () => {
+    console.log('handleInitiateNewPlaylist');
+    initiateNewPlaylist(user);
+  };
+
   return (
     <div className="flex flex-col h-screen bg-gray-100 md:flex-row">
 
@@ -289,24 +283,19 @@ export default function Discover() {
           getSliderValue={(param, values) => getSliderValue(param as keyof AdvancedParams, values)}
           formatParamValue={(param, value) => formatParamValue(param as keyof AdvancedParams, value)}
           handleRemoveSelection={(item) => handleRemoveSelection(item, selections, setSelections)}
-          // handleSaveQuery={handleSaveQueryWrapper}
           handleSelectQuery={selectQuery}
           handleSwitchToSearch={() => handleSwitchToSearch(setSidebarMode)}
           selections={selections}
           advancedParams={advancedParams}
-          // savedQueries={savedQueries}
           isLoadingQueries={isLoadingQueries}
           hoveredParam={hoveredParam}
           setHoveredParam={setHoveredParam} 
           handleReset={handleReset}
-          // playlists={playlists}
           accessToken={accessToken}
           recommendations={recommendations}
           savedPlaylists={savedPlaylists}
-          selectPlaylist={selectPlaylist}
           clearSelectedPlaylist={clearSelectedPlaylist}
           selectedPlaylist={selectedPlaylist}
-          selectedPlaylistTracks={selectedPlaylistTracks}
           totalPlaylists={totalPlaylists}
           limit={limit}
           offset={offset}
@@ -317,13 +306,15 @@ export default function Discover() {
           isDeletingPlaylist={isDeletingPlaylist}
           isLoadingPlaylists={isLoadingPlaylists}
           currentPage={currentPage}
-          totalPages={totalPages}
           error={playlistsError}
           savedQueries={savedQueries}
           queriesError={queriesError}
-          saveNewQuery={saveNewQuery}
           loadPage={loadPage}
-          updatePlaylistTracks={updatePlaylistTracks}
+          handleInitiateNewPlaylist={handleInitiateNewPlaylist}
+          isEditingNewPlaylist={isEditingNewPlaylist}
+          saveNewPlaylist={saveNewPlaylist}
+          newPlaylistName={newPlaylistName}
+          updateNewPlaylistName={updateNewPlaylistName}
         />
       </div>
 
@@ -382,7 +373,6 @@ export default function Discover() {
                 isDeletingPlaylist={isDeletingPlaylist}
                 isLoadingPlaylists={isLoadingPlaylists}
                 currentPage={currentPage}
-                totalPages={totalPages}
                 error={playlistsError}
                 savedQueries={savedQueries}
                 queriesError={queriesError}

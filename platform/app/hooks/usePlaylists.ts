@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useFetcher } from "@remix-run/react";
 import { Playlist } from "../types/playlists/types";
+import { createEmptyPlaylist } from "../utils/playlist";
 
 interface PlaylistsResponse {
   href: string;
@@ -38,6 +39,8 @@ export const usePlaylists = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [gridSelectedPlaylist, setGridSelectedPlaylist] = useState<Playlist | null>(null);
   const [gridSelectedPlaylistTracks, setGridSelectedPlaylistTracks] = useState<PlaylistTracksResponse | null>(null);
+  const [isEditingNewPlaylist, setIsEditingNewPlaylist] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState('');
 
   const loadPlaylists = useCallback(
     async (forcedOffset?: number) => {
@@ -252,14 +255,68 @@ export const usePlaylists = () => {
     }
   }, [savedPlaylists]);
 
+  const initiateNewPlaylist = useCallback((user: User) => {
+    const emptyPlaylist = createEmptyPlaylist(user);
+    setSelectedPlaylist(emptyPlaylist);
+    setSelectedPlaylistTracks({ href: '', items: [], limit: 0, next: null, offset: 0, previous: null, total: 0 });
+    setIsEditingNewPlaylist(true);
+    setNewPlaylistName(''); // Reset the new playlist name
+  }, []);
+
+  const updateNewPlaylistName = useCallback((name: string) => {
+    setNewPlaylistName(name);
+    if (selectedPlaylist && isEditingNewPlaylist) {
+      setSelectedPlaylist(prev => prev ? { ...prev, name } : null);
+    }
+  }, [selectedPlaylist, isEditingNewPlaylist]);
+
+  const saveNewPlaylist = useCallback(async () => {
+    if (!selectedPlaylist || !newPlaylistName.trim()) {
+      console.error("Cannot save playlist: No playlist selected or name is empty");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("action", "create");
+      formData.append(
+        "playlistData",
+        JSON.stringify({
+          name: newPlaylistName.trim(),
+          description: selectedPlaylist.description || "",
+          public: selectedPlaylist.public,
+        })
+      );
+
+      const response = await fetch("/api/playlists", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const createdPlaylist = await response.json();
+      setSelectedPlaylist(createdPlaylist);
+      setSavedPlaylists((prevPlaylists) => [createdPlaylist, ...prevPlaylists]);
+      setIsEditingNewPlaylist(false);
+      setNewPlaylistName('');
+      return createdPlaylist;
+    } catch (error) {
+      console.error("Error creating new playlist:", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedPlaylist, newPlaylistName]);
+
   return {
     savedPlaylists,
     selectedPlaylist,
     selectedPlaylistTracks,
-    totalPlaylists,
-    limit,
-    offset,
-    hasMore,
+    isEditingNewPlaylist,
     loadPlaylists,
     loadMore,
     loadPrevious,
@@ -278,7 +335,8 @@ export const usePlaylists = () => {
       fetcher.state === "submitting" &&
       fetcher.submission?.formData.get("action") === "delete",
     currentPage: Math.floor(offset / limit) + 1,
-    totalPages: Math.ceil(totalPlaylists / limit),
+    totalPlaylists,
+    limit,
     loadPage,
     removeTrackFromPlaylist,
     updatePlaylistTracks,
@@ -286,5 +344,9 @@ export const usePlaylists = () => {
     selectGridPlaylist,
     gridSelectedPlaylist,
     gridSelectedPlaylistTracks,
+    initiateNewPlaylist,
+    saveNewPlaylist,
+    newPlaylistName,
+    updateNewPlaylistName,
   };
 };

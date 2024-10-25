@@ -18,7 +18,6 @@ import { Form } from '@remix-run/react';
 import { getRandomColorClass } from '../../utils/forms';
 import { PlaylistSidebar } from './PlaylistSidebar';
 
-
 const categoryMapping: Record<CategoryLabel, CategoryType> = {
   'Songs': 'track',
   'Artists': 'artist',
@@ -86,6 +85,11 @@ export default function DiscoverSidebar({
   queriesError,
   loadPage,
   updatePlaylistTracks,
+  handleInitiateNewPlaylist,
+  isEditingNewPlaylist,
+  saveNewPlaylist,
+  newPlaylistName,
+  updateNewPlaylistName,
 } : { 
   user: User | null, 
   accessToken: string | null,
@@ -135,12 +139,16 @@ export default function DiscoverSidebar({
   isLoadingPlaylists: boolean,
   error: string,
   currentPage: number,
-  totalPages: number,
   saveNewQuery: (queryName: string, selections: FormattedResult[], category: CategoryLabel, advancedParams: AdvancedParams, recommendations: string[]) => void,
   savedQueries: Query[],
   queriesError: string,
   loadPage: (page: number) => void,
   updatePlaylistTracks: (newTracks: Track[]) => void,
+  handleInitiateNewPlaylist: () => void,
+  isEditingNewPlaylist: boolean,
+  saveNewPlaylist: (playlist: Playlist) => void,
+  newPlaylistName: string,
+  updateNewPlaylistName: (name: string) => void,
 }) {
   const prevInputValueRef = useRef('');
   const prevCategoryRef = useRef<CategoryLabel>('Songs');
@@ -568,11 +576,16 @@ export default function DiscoverSidebar({
       
       {sidebarMode === 'playlists' && (
         <>
-          {selectedPlaylist ? (
+          {selectedPlaylist || isEditingNewPlaylist ? (
             <PlaylistSidebar
               tracks={selectedPlaylistTracks}
               onReorder={handleReorder}
               onBackToPlaylists={clearSelectedPlaylist}
+              saveNewPlaylist={saveNewPlaylist}
+              isEditingNewPlaylist={isEditingNewPlaylist}
+              newPlaylistName={newPlaylistName}
+              updateNewPlaylistName={updateNewPlaylistName}
+              isLoadingPlaylists={isLoadingPlaylists}
             />
           ) : (
             <PlaylistsForm 
@@ -593,6 +606,7 @@ export default function DiscoverSidebar({
               savedPlaylists={savedPlaylists}
               loadPage={loadPage}
               updatePlaylistTracks={updatePlaylistTracks}
+              handleInitiateNewPlaylist={handleInitiateNewPlaylist}
             />
           )}
         </>

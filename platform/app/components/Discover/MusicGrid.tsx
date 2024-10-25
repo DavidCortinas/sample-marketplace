@@ -44,8 +44,6 @@ export function MusicGrid({
   const gridRef = useRef<HTMLDivElement>(null);
   const lastItemRef = useRef<HTMLDivElement>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  console.log('playlistTracks', playlistTracks);
-  console.log('visibleResults', visibleResults);
 
   const results = useMemo(() => 
     selectedTab === 'recommendations' ? recommendations : playlistTracks.map(track => track.uri),
@@ -126,7 +124,6 @@ export function MusicGrid({
       }
     }
   }, [hasLocalTracks, selectedTab, addToast, removeToast, toasts]);
-  console.log('results', results);
 
   if (results.length === 0) {
     if (selectedTab === 'recommendations') {

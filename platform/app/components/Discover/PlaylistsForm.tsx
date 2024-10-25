@@ -1,21 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from '@remix-run/react';
 import { Tooltip } from '../Tooltip';
 import { AlertModal } from '../AlertModal';
 import { SkeletonPlaylist } from './SkeletonPlaylist';
-import { Playlist, Track } from '../../types/playlists/types';
-import { usePlaylists } from '../../hooks/usePlaylists';
-import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/20/solid';
+import { Playlist } from '../../types/playlists/types';
 
 interface PlaylistsFormProps {
   error: string | null;
-  colorClassRefs: { [key: string]: string };
   selectPlaylist: (playlistId: string) => void;
-  selectedPlaylist: Playlist | null;
-  selectedPlaylistTracks: Track[];
   totalPlaylists: number;
   limit: number;
-  hasMore: boolean;
   loadMore: () => void;
   loadPrevious: () => void;
   changeLimit: (newLimit: number) => void;
@@ -24,6 +17,7 @@ interface PlaylistsFormProps {
   isLoadingPlaylists: boolean;
   savedPlaylists: Playlist[];
   loadPage: (pageNumber: number) => void; 
+  handleInitiateNewPlaylist: () => void;
 }
 
 const borderColorClasses = [
@@ -39,13 +33,9 @@ const borderColorClasses = [
 
 export function PlaylistsForm({
   error,
-  colorClassRefs,
   selectPlaylist,
-  selectedPlaylist,
-  selectedPlaylistTracks,
   totalPlaylists,
   limit,
-  hasMore,
   loadMore,
   loadPrevious,
   changeLimit,
@@ -53,7 +43,8 @@ export function PlaylistsForm({
   isDeletingPlaylist,
   savedPlaylists,
   isLoadingPlaylists,
-  loadPage // Add this prop to handle loading a specific page
+  loadPage,
+  handleInitiateNewPlaylist,
 }: PlaylistsFormProps) {
 	const [hoveredPlaylistId, setHoveredPlaylistId] = useState<string | null>(null);
   const [hoveredSelectId, setHoveredSelectId] = useState<string | null>(null);
@@ -61,14 +52,15 @@ export function PlaylistsForm({
 	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 	const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(null);
   const [borderColors, setBorderColors] = useState<{ [key: string]: string }>({});
-	const navigate = useNavigate();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectTooltipRect, setSelectTooltipRect] = useState<{ [key: string]: DOMRect | null }>({});
+  const [deleteTooltipRect, setDeleteTooltipRect] = useState<{ [key: string]: DOMRect | null }>({});
+  const [inputPage, setInputPage] = useState(currentPage.toString());
+
 	const buttonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
 	const deleteButtonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
 	
-  const [currentPage, setCurrentPage] = useState(1);
   const totalPages = Math.ceil(totalPlaylists / limit);
-  const [selectTooltipRect, setSelectTooltipRect] = useState<{ [key: string]: DOMRect | null }>({});
-  const [deleteTooltipRect, setDeleteTooltipRect] = useState<{ [key: string]: DOMRect | null }>({});
 
   useEffect(() => {
     const newBorderColors: { [key: string]: string } = {};
@@ -230,17 +222,15 @@ export function PlaylistsForm({
 				<p className="text-center text-text-secondary mt-4">You don't have any playlists yet.</p>
 				<div className="mt-4 text-center">
 					<button
-						onClick={() => navigate('/create-playlist')}
+						onClick={handleInitiateNewPlaylist}
 						className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
 					>
-						Create a Playlist
+						Create a New Playlist
 					</button>
 				</div>
 			</div>
 		);
 	}
-
-	const [inputPage, setInputPage] = useState(currentPage.toString());
 
 	const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setInputPage(e.target.value);
